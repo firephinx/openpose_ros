@@ -1,5 +1,7 @@
 # openposeros
 
+Example ros catkin package that utilizes the openpose library from https://github.com/CMU-Perceptual-Computing-Lab/openpose.
+
 ## System
 Tested on:
 * Ubuntu 14.04.5 
