@@ -1,11 +1,12 @@
 # openposeros
 
 ## System
-Tested on Ubuntu 14.04.5 
-Ros Indigo
-CUDA 8.0
-cuDNN 5.1
-OpenCV 3.2
+Tested on:
+* Ubuntu 14.04.5 
+* Ros Indigo
+* CUDA 8.0
+* cuDNN 5.1
+* OpenCV 3.2
 
 ## Installation Steps
 
@@ -39,5 +40,7 @@ OpenCV 3.2
 11. If you have problems with CUDA during catkin_make, uncomment this line # find_package(CUDA REQUIRED)
 
 ## Running
-Simply source your catkin_ws/devel/setup.bash
-Then execute rosrun openpose_ros openpose_ros_node
+```bash
+source catkin_ws/devel/setup.bash
+rosrun openpose_ros openpose_ros_node
+```
