@@ -38,8 +38,9 @@ DEFINE_double(scale_gap,                0.3,            "Scale gap between scale
                                                         "you actually want to multiply the `net_resolution` by your desired initial scale.");
 DEFINE_int32(num_scales,                1,              "Number of scales to average.");
 // OpenPose Rendering
+DEFINE_bool(disable_blending,           false,          "If blending is enabled, it will merge the results with the original frame. If disabled, it"
+                                                        " will only display the results.");
 DEFINE_double(alpha_pose,               0.6,            "Blending factor (range 0-1) for the body part rendering. 1 will show it completely, 0 will hide it.");
-
 
 class OpenPoseNode
 {
@@ -97,17 +98,19 @@ op::PoseModel gflagToPoseModel(const std::string& poseModeString)
 }
 
 // Google flags into program variables
-std::tuple<cv::Size, cv::Size, cv::Size, op::PoseModel> gflagsToOpParameters()
+std::tuple<op::Point<int>, op::Point<int>, op::Point<int>, op::PoseModel> gflagsToOpParameters()
 {
     op::log("", op::Priority::Low, __LINE__, __FUNCTION__, __FILE__);
     // outputSize
-    cv::Size outputSize;
-    auto nRead = sscanf(FLAGS_resolution.c_str(), "%dx%d", &outputSize.width, &outputSize.height);
-    op::checkE(nRead, 2, "Error, resolution format (" +  FLAGS_resolution + ") invalid, should be e.g., 960x540 ", __LINE__, __FUNCTION__, __FILE__);
+    op::Point<int> outputSize;
+    auto nRead = sscanf(FLAGS_resolution.c_str(), "%dx%d", &outputSize.x, &outputSize.y);
+    op::checkE(nRead, 2, "Error, resolution format (" +  FLAGS_resolution + ") invalid, should be e.g., 960x540 ",
+               __LINE__, __FUNCTION__, __FILE__);
     // netInputSize
-    cv::Size netInputSize;
-    nRead = sscanf(FLAGS_net_resolution.c_str(), "%dx%d", &netInputSize.width, &netInputSize.height);
-    op::checkE(nRead, 2, "Error, net resolution format (" +  FLAGS_net_resolution + ") invalid, should be e.g., 656x368 (multiples of 16)", __LINE__, __FUNCTION__, __FILE__);
+    op::Point<int> netInputSize;
+    nRead = sscanf(FLAGS_net_resolution.c_str(), "%dx%d", &netInputSize.x, &netInputSize.y);
+    op::checkE(nRead, 2, "Error, net resolution format (" +  FLAGS_net_resolution + ") invalid, should be e.g., 656x368 (multiples of 16)",
+               __LINE__, __FUNCTION__, __FILE__);
     // netOutputSize
     const auto netOutputSize = netInputSize;
     // poseModel
@@ -116,7 +119,7 @@ std::tuple<cv::Size, cv::Size, cv::Size, op::PoseModel> gflagsToOpParameters()
     if (FLAGS_alpha_pose < 0. || FLAGS_alpha_pose > 1.)
         op::error("Alpha value for blending must be in the range [0,1].", __LINE__, __FUNCTION__, __FILE__);
     if (FLAGS_scale_gap <= 0. && FLAGS_num_scales > 1)
-        op::error("Uncompatible flag configuration: scale_gap must be greater than 0 or num_scales = 1.", __LINE__, __FUNCTION__, __FILE__);
+        op::error("Incompatible flag configuration: scale_gap must be greater than 0 or num_scales = 1.", __LINE__, __FUNCTION__, __FILE__);
     // Logging and return result
     op::log("", op::Priority::Low, __LINE__, __FUNCTION__, __FILE__);
     return std::make_tuple(outputSize, netInputSize, netOutputSize, poseModel);
@@ -124,53 +127,55 @@ std::tuple<cv::Size, cv::Size, cv::Size, op::PoseModel> gflagsToOpParameters()
 
 int opRealTimeProcessing()
 {
+    op::log("OpenPose ROS Node", op::Priority::High);
+    // ------------------------- INITIALIZATION -------------------------
+    // Step 1 - Set logging level
+        // - 0 will output all the logging messages
+        // - 255 will output nothing
     op::check(0 <= FLAGS_logging_level && FLAGS_logging_level <= 255, "Wrong logging_level value.", __LINE__, __FUNCTION__, __FILE__);
     op::ConfigureLog::setPriorityThreshold((op::Priority)FLAGS_logging_level);
-
-    // Step 1 - Read Google flags (user defined configuration)
-    cv::Size outputSize;
-    cv::Size netInputSize;
-    cv::Size netOutputSize;
+    // Step 2 - Read Google flags (user defined configuration)
+    op::Point<int> outputSize;
+    op::Point<int> netInputSize;
+    op::Point<int> netOutputSize;
     op::PoseModel poseModel;
     std::tie(outputSize, netInputSize, netOutputSize, poseModel) = gflagsToOpParameters();
-
-    // Step 2 - Initialize all required classes
+    // Step 3 - Initialize all required classes
     op::CvMatToOpInput cvMatToOpInput{netInputSize, FLAGS_num_scales, (float)FLAGS_scale_gap};
     op::CvMatToOpOutput cvMatToOpOutput{outputSize};
-    op::PoseExtractorCaffe poseExtractorCaffe{netInputSize, netOutputSize, outputSize, FLAGS_num_scales, (float)FLAGS_scale_gap, poseModel,
+    op::PoseExtractorCaffe poseExtractorCaffe{netInputSize, netOutputSize, outputSize, FLAGS_num_scales, poseModel,
                                               FLAGS_model_folder, FLAGS_num_gpu_start};
-    op::PoseRenderer poseRenderer{netOutputSize, outputSize, poseModel, nullptr, (float)FLAGS_alpha_pose};
+    op::PoseRenderer poseRenderer{netOutputSize, outputSize, poseModel, nullptr, !FLAGS_disable_blending, (float)FLAGS_alpha_pose};
     op::OpOutputToCvMat opOutputToCvMat{outputSize};
-
-    // Step 3 - Initialize resources on desired thread (in this case single thread, i.e. we init resources here)
+    // Step 4 - Initialize resources on desired thread (in this case single thread, i.e. we init resources here)
     poseExtractorCaffe.initializationOnThread();
     poseRenderer.initializationOnThread();
 
-    // Step 4 - Initialize the image subscriber
+    // Step 5 - Initialize the image subscriber
     OpenPoseNode opn;
 
-    int count = 0;
-    const auto timerBegin = std::chrono::high_resolution_clock::now();
+    int frame_count = 0;
+    const std::chrono::high_resolution_clock::time_point timerBegin = std::chrono::high_resolution_clock::now();
 
     ros::spinOnce();
 
-    // Step 5 - Continuously process images from image subscriber
+    // Step 6 - Continuously process images from image subscriber
     while (ros::ok())
     {
-        // Step 6 - Get cv_image ptr and check that it is not null
+        // ------------------------- POSE ESTIMATION AND RENDERING -------------------------
+        // Step 1 - Get cv_image ptr and check that it is not null
         cv_bridge::CvImagePtr tmp_image_ptr = opn.get_cvimage_ptr();
         if(tmp_image_ptr != nullptr)
         {
-            // Step 7 - Format Input and Output Image
+            // Step 2 - Format input image to OpenPose input and output formats
             cv::Mat inputImage = tmp_image_ptr->image;
-            const auto netInputArray = cvMatToOpInput.format(inputImage);
+            op::Array<float> netInputArray;
+            std::vector<float> scaleRatios;
+            std::tie(netInputArray, scaleRatios) = cvMatToOpInput.format(inputImage);
             double scaleInputToOutput;
             op::Array<float> outputArray;
             std::tie(scaleInputToOutput, outputArray) = cvMatToOpOutput.format(inputImage);
-
-            // Step 8 - Estimate poseKeyPoints
-            poseExtractorCaffe.forwardPass(netInputArray, inputImage.size());
-
+            // Step 3 - Estimate poseKeypoints
             // poseKeyPoints stores the useful information about the humans
             // poseKeyPoints.getSize(0); is the number of people in the frame
             // poseKeyPoints.getSize(1); is the number of body parts tracked (which is 18 for coco)
@@ -179,25 +184,27 @@ int opRealTimeProcessing()
             // Each body part has an x, y, and confidence, so you can access the first body part's x with
             // poseKeyPoints[0], the first body part's y with poseKeyPoints[1], and the first body part's
             // confidence with poseKeyPoints[2]
-            const auto poseKeyPoints = poseExtractorCaffe.getPoseKeyPoints();
-
-            // Step 9 - Render the pose 
-            poseRenderer.renderPose(outputArray, poseKeyPoints);
-            // Step 10 - OpenPose output format to cv::Mat
+            poseExtractorCaffe.forwardPass(netInputArray, {inputImage.cols, inputImage.rows}, scaleRatios);
+            const auto poseKeypoints = poseExtractorCaffe.getPoseKeypoints();
+            // Step 4 - Render poseKeypoints
+            poseRenderer.renderPose(outputArray, poseKeypoints);
+            // Step 5 - OpenPose output format to cv::Mat
             auto outputImage = opOutputToCvMat.formatToCvMat(outputArray);
 
-            // Stepp 11 - Show the image
+            // Step 6 - Show the image
             cv::imshow(OPENCV_WINDOW, outputImage);
             cv::waitKey(1); // It displays the image and sleeps at least 1 ms (it usually sleeps ~5-10 msec to display the image)
-            count++;
+            frame_count++;
         }        
         ros::spinOnce();
     }
 
     // Measuring total time
-    const auto totalTimeSec = (double)std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now()-timerBegin).count() * 1e-9;
-    const auto message = "Real-time pose estimation demo successfully finished. Total time: " + std::to_string(totalTimeSec) + " seconds. " 
-                         + std::to_string(count) + " frames processed. Average FPS is " + std::to_string(count/totalTimeSec);
+    const double totalTimeSec = (double)std::chrono::duration_cast<std::chrono::nanoseconds>
+                              (std::chrono::high_resolution_clock::now()-timerBegin).count() * 1e-9;
+    const std::string message = "Real-time pose estimation demo successfully finished. Total time: " 
+                                + std::to_string(totalTimeSec) + " seconds. " + std::to_string(frame_count)
+                                + " frames processed. Average fps is " + std::to_string(frame_count/totalTimeSec) + ".";
     op::log(message, op::Priority::Max);
 
     return 0;
