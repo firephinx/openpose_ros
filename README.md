@@ -12,20 +12,26 @@ Tested on:
 
 ## Installation Steps
 
-1. Clone the glog_catkin repository into your catkin_workspace/src directory.
+1. Install openpose (not in catkin_workspace).
+   ```bash
+   git clone https://github.com/CMU-Perceptual-Computing-Lab/openpose.git
+   ```
+2. Clone the glog_catkin repository into your catkin_workspace/src directory.
    ```bash
    git clone https://github.com/ethz-asl/glog_catkin.git
    ```
-2. Clone the gflags repository into your catkin_workspace/src directory.
+3. Clone the gflags repository into your catkin_workspace/src directory.
    ```bash
    git clone https://github.com/davetcoleman/gflags.git
    ```
-3. Clone the catkin_simple repository into your catkin_workspace/src directory.
+4. Clone the catkin_simple repository into your catkin_workspace/src directory.
    ```bash
    git clone https://github.com/catkin/catkin_simple.git
    ```
-4. Install openpose from here (not in catkin_workspace): https://github.com/firephinx/openpose
 5. Clone this repository into your catkin_workspace/src directory.
+   ```bash
+   git clone https://github.com/firephinx/openpose_ros.git
+   ```
 6. Modify the following lines in the CMakeLists.txt to the proper directories of where you installed caffe and openpose:
    ```bash
    set(CAFFE_DIR /path/to/caffe)
@@ -41,8 +47,10 @@ Tested on:
    ```
 9. Modify the other parameters in src/openpose_ros_node.cpp and src/openpose_ros_node_with_face.cpp to your liking such as the net_resolution and resolution of the image.
 10. Run catkin_make from your catkin_workspace directory. (It will fail the first time so run it twice.)
-11. If cv_bridge is causing you errors and/or you decide to use OpenCV 3.2, copy the cv_bridge folder from https://github.com/ros-perception/vision_opencv into your catkin_workspace/src directory. 
-12. If you have problems with CUDA during catkin_make, uncomment this line # find_package(CUDA REQUIRED)
+
+### Potential Installation Issues
+1. If cv_bridge is causing you errors and/or you decide to use OpenCV 3.2, copy the cv_bridge folder from https://github.com/ros-perception/vision_opencv into your catkin_workspace/src directory. 
+2. If you have problems with CUDA during catkin_make, uncomment this line # find_package(CUDA REQUIRED)
 
 ## Running
 ```bash
