@@ -4,7 +4,6 @@
 #include <sensor_msgs/image_encodings.h>
 
 #include <chrono> // `std::chrono::` functions and classes, e.g. std::chrono::milliseconds
-#include <cstdio> // sscanf
 #include <string> // std::string
 
 #include <opencv2/core/core.hpp> // cv::Mat & cv::Size
@@ -29,9 +28,6 @@
 #include <openpose/pose/headers.hpp>
 #include <openpose/utilities/headers.hpp>
 
-static const std::string OPENCV_WINDOW = "OpenPose ROS";
-static const std::string image_topic = "/camera/image_raw";
-
 // See all the available parameter options withe the `--help` flag. E.g. `./build/examples/openpose/openpose.bin --help`.
 // Note: This command will show you flags for other unnecessary 3rdparty files. Check only the flags for the OpenPose
 // executable. E.g. for `openpose.bin`, look for `Flags from examples/openpose/openpose.cpp:`.
@@ -39,13 +35,15 @@ static const std::string image_topic = "/camera/image_raw";
 DEFINE_int32(logging_level,             4,              "The logging level. Integer in the range [0, 255]. 0 will output any log() message, while"
                                                         " 255 will not output any. Current OpenPose library messages are in the range 0-4: 1 for"
                                                         " low priority messages and 4 for important ones.");
+// Camera Topic
+DEFINE_string(camera_topic,             "/camera/image_raw",      "Image topic that OpenPose will process.");
 // OpenPose
-DEFINE_string(model_pose,               "COCO",         "Model to be used (e.g. COCO, MPI, MPI_4_layers).");
 DEFINE_string(model_folder,             "/path/to/openpose/models/",      "Folder path (absolute or relative) where the models (pose, face, ...) are located.");
 DEFINE_string(net_resolution,           "656x368",      "Multiples of 16. If it is increased, the accuracy usually increases. If it is decreased,"
                                                         " the speed increases.");
 DEFINE_string(resolution,               "1280x720",     "The image resolution (display and output). Use \"-1x-1\" to force the program to use the"
                                                         " default images resolution.");
+DEFINE_string(model_pose,               "COCO",         "Model to be used (e.g. COCO, MPI, MPI_4_layers).");
 DEFINE_int32(num_gpu_start,             0,              "GPU device start number.");
 DEFINE_double(scale_gap,                0.3,            "Scale gap between scales. No effect unless num_scales>1. Initial scale is always 1. If you"
                                                         " want to change the initial scale, you actually want to multiply the `net_resolution` by"
@@ -57,7 +55,7 @@ DEFINE_bool(disable_blending,           false,          "If blending is enabled,
 DEFINE_double(alpha_pose,               0.6,            "Blending factor (range 0-1) for the body part rendering. 1 will show it completely, 0 will"
                                                         " hide it. Only valid for GPU rendering.");
 
-class OpenPoseNode
+class RosImgSub
 {
     private:
         ros::NodeHandle nh_;
@@ -66,14 +64,14 @@ class OpenPoseNode
         cv_bridge::CvImagePtr cv_img_ptr_;
 
     public:
-        OpenPoseNode(): it_(nh_)
+        RosImgSub(const std::string& image_topic): it_(nh_)
         {
             // Subscribe to input video feed and publish output video feed
-            image_sub_ = it_.subscribe(image_topic, 1, &OpenPoseNode::convertImage, this);
+            image_sub_ = it_.subscribe(image_topic, 1, &RosImgSub::convertImage, this);
             cv_img_ptr_ = nullptr;
         }
 
-        ~OpenPoseNode(){}
+        ~RosImgSub(){}
 
         void convertImage(const sensor_msgs::ImageConstPtr& msg)
         {
@@ -133,7 +131,7 @@ int openPoseROSTutorial()
     poseRenderer.initializationOnThread();
 
     // Step 5 - Initialize the image subscriber
-    OpenPoseNode opn;
+    RosImgSub ris(FLAGS_camera_topic);
 
     int frame_count = 0;
     const std::chrono::high_resolution_clock::time_point timerBegin = std::chrono::high_resolution_clock::now();
@@ -145,7 +143,7 @@ int openPoseROSTutorial()
     {
         // ------------------------- POSE ESTIMATION AND RENDERING -------------------------
         // Step 1 - Get cv_image ptr and check that it is not null
-        cv_bridge::CvImagePtr cvImagePtr = opn.getCvImagePtr();
+        cv_bridge::CvImagePtr cvImagePtr = ris.getCvImagePtr();
         if(cvImagePtr != nullptr)
         {
             cv::Mat inputImage = cvImagePtr->image;
@@ -167,7 +165,7 @@ int openPoseROSTutorial()
 
             // ------------------------- SHOWING RESULT AND CLOSING -------------------------
             // Step 1 - Show results
-            cv::imshow(OPENCV_WINDOW, outputImage);
+            cv::imshow("OpenPose ROS", outputImage);
             cv::waitKey(1);
             frame_count++;
         }
