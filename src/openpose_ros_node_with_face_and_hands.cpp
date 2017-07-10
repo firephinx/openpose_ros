@@ -7,7 +7,7 @@
 
 #include <opencv2/core/core.hpp> // cv::Mat & cv::Size
 
-// ------------------------- OpenPose Library Tutorial - Thread - Example 1 - Asynchronous -------------------------
+// ------------------------- OpenPose Library ROS Tutorial -------------------------
 // Asynchronous mode: ideal for fast prototyping when performance is not an issue. The user emplaces/pushes and pops frames from the OpenPose wrapper when he desires to.
 
 // This example shows the user how to use the OpenPose wrapper class:
@@ -55,15 +55,15 @@ DEFINE_int32(keypoint_scale,            0,              "Scaling of the (x,y) co
                                                         " Select `0` to scale it to the original source resolution, `1`to scale it to the net output"
                                                         " size (set with `net_resolution`), `2` to scale it to the final output size (set with"
                                                         " `resolution`), `3` to scale it in the range [0,1], and 4 for range [-1,1]. Non related"
-                                                        " with `num_scales` and `scale_gap`.");
+                                                        " with `scale_number` and `scale_gap`.");
 // OpenPose Body Pose
 DEFINE_string(model_pose,               "COCO",         "Model to be used (e.g. COCO, MPI, MPI_4_layers).");
 DEFINE_string(net_resolution,           "656x368",      "Multiples of 16. If it is increased, the accuracy usually increases. If it is decreased,"
                                                         " the speed increases.");
-DEFINE_int32(num_scales,                1,              "Number of scales to average.");
-DEFINE_double(scale_gap,                0.3,            "Scale gap between scales. No effect unless num_scales>1. Initial scale is always 1. If you"
-                                                        " want to change the initial scale, you actually want to multiply the `net_resolution` by"
-                                                        " your desired initial scale.");
+DEFINE_int32(scale_number,              1,              "Number of scales to average.");
+DEFINE_double(scale_gap,                0.3,            "Scale gap between scales. No effect unless scale_number > 1. Initial scale is always 1."
+                                                        " If you want to change the initial scale, you actually want to multiply the"
+                                                        " `net_resolution` by your desired initial scale.");
 DEFINE_bool(heatmaps_add_parts,         false,          "If true, it will add the body part heatmaps to the final op::Datum::poseHeatMaps array"
                                                         " (program speed will decrease). Not required for our library, enable it only if you intend"
                                                         " to process this information later. If more than one `add_heatmaps_X` flag is enabled, it"
@@ -75,27 +75,34 @@ DEFINE_bool(heatmaps_add_PAFs,          false,          "Same functionality as `
 DEFINE_int32(heatmaps_scale,            2,              "Set 0 to scale op::Datum::poseHeatMaps in the range [0,1], 1 for [-1,1]; and 2 for integer"
                                                         " rounded [0,255].");
 // OpenPose Face
-DEFINE_bool(face,                       true,          "Enables face keypoint detection. It will share some parameters from the body pose, e.g."
+DEFINE_bool(face,                       true,           "Enables face keypoint detection. It will share some parameters from the body pose, e.g."
                                                         " `model_folder`.");
 DEFINE_string(face_net_resolution,      "368x368",      "Multiples of 16. Analogous to `net_resolution` but applied to the face keypoint detector."
                                                         " 320x320 usually works fine while giving a substantial speed up when multiple faces on the"
                                                         " image.");
 // OpenPose Hand
-DEFINE_bool(hand,                       false,          "Enables hand keypoint detection. It will share some parameters from the body pose, e.g."
+DEFINE_bool(hand,                       true,           "Enables hand keypoint detection. It will share some parameters from the body pose, e.g."
                                                         " `model_folder`.");
 DEFINE_string(hand_net_resolution,      "368x368",      "Multiples of 16. Analogous to `net_resolution` but applied to the hand keypoint detector.");
-DEFINE_int32(hand_detection_mode,       0,              "Set to 0 to perform 1-time keypoint detection (fastest), 1 for iterative detection"
-                                                        " (recommended for images and fast videos, slow method), 2 for tracking (recommended for"
-                                                        " webcam if the frame rate is >10 FPS per GPU used and for video, in practice as fast as"
-                                                        " 1-time detection), 3 for both iterative and tracking (recommended for webcam if the"
-                                                        " resulting frame rate is still >10 FPS and for video, ideally best result but slower), or"
-                                                        " -1 (default) for automatic selection (fast method for webcam, tracking for video and"
-                                                        " iterative for images).");
+DEFINE_int32(hand_scale_number,         1,              "Analogous to `scale_number` but applied to the hand keypoint detector. Our best results"
+                                                        " were found with `hand_scale_number` = 6 and `hand_scale_range` = 0.4");
+DEFINE_double(hand_scale_range,         0.4,            "Analogous purpose than `scale_gap` but applied to the hand keypoint detector. Total range"
+                                                        " between smallest and biggest scale. The scales will be centered in ratio 1. E.g. if"
+                                                        " scaleRange = 0.4 and scalesNumber = 2, then there will be 2 scales, 0.8 and 1.2.");
+
+DEFINE_bool(hand_tracking,              false,          "Adding hand tracking might improve hand keypoints detection for webcam (if the frame rate"
+                                                        " is high enough, i.e. >7 FPS per GPU) and video. This is not person ID tracking, it"
+                                                        " simply looks for hands in positions at which hands were located in previous frames, but"
+                                                        " it does not guarantee the same person ID among frames");
 // OpenPose Rendering
 DEFINE_int32(part_to_show,              0,              "Part to show from the start.");
 DEFINE_bool(disable_blending,           false,          "If blending is enabled, it will merge the results with the original frame. If disabled, it"
                                                         " will only display the results.");
 // OpenPose Rendering Pose
+DEFINE_double(render_threshold,         0.05,           "Only estimated keypoints whose score confidences are higher than this threshold will be"
+                                                        " rendered. Generally, a high threshold (> 0.5) will only render very clear body parts;"
+                                                        " while small thresholds (~0.1) will also output guessed and occluded keypoints, but also"
+                                                        " more false positives (i.e. wrong detections).");
 DEFINE_int32(render_pose,               2,              "Set to 0 for no rendering, 1 for CPU rendering (slightly faster), and 2 for GPU rendering"
                                                         " (slower but greater functionality, e.g. `alpha_X` flags). If rendering is enabled, it will"
                                                         " render both `outputData` and `cvOutputData` with the original image and desired body part"
@@ -105,15 +112,17 @@ DEFINE_double(alpha_pose,               0.6,            "Blending factor (range 
 DEFINE_double(alpha_heatmap,            0.7,            "Blending factor (range 0-1) between heatmap and original frame. 1 will only show the"
                                                         " heatmap, 0 will only show the frame. Only valid for GPU rendering.");
 // OpenPose Rendering Face
-DEFINE_int32(render_face,               -1,             "Analogous to `render_pose` but applied to the face. Extra option: -1 to use the same"
+DEFINE_double(face_render_threshold,    0.4,            "Analogous to `render_threshold`, but applied to the face keypoints.");
+DEFINE_int32(face_render,               -1,             "Analogous to `render_pose` but applied to the face. Extra option: -1 to use the same"
                                                         " configuration that `render_pose` is using.");
-DEFINE_double(alpha_face,               0.6,            "Analogous to `alpha_pose` but applied to face.");
-DEFINE_double(alpha_heatmap_face,       0.7,            "Analogous to `alpha_heatmap` but applied to face.");
+DEFINE_double(face_alpha_pose,          0.6,            "Analogous to `alpha_pose` but applied to face.");
+DEFINE_double(face_alpha_heatmap,       0.7,            "Analogous to `alpha_heatmap` but applied to face.");
 // OpenPose Rendering Hand
-DEFINE_int32(render_hand,               -1,             "Analogous to `render_pose` but applied to the hand. Extra option: -1 to use the same"
+DEFINE_double(hand_render_threshold,    0.2,            "Analogous to `render_threshold`, but applied to the hand keypoints.");
+DEFINE_int32(hand_render,               -1,             "Analogous to `render_pose` but applied to the hand. Extra option: -1 to use the same"
                                                         " configuration that `render_pose` is using.");
-DEFINE_double(alpha_hand,               0.6,            "Analogous to `alpha_pose` but applied to hand.");
-DEFINE_double(alpha_heatmap_hand,       0.7,            "Analogous to `alpha_heatmap` but applied to hand.");
+DEFINE_double(hand_alpha_pose,          0.6,            "Analogous to `alpha_pose` but applied to hand.");
+DEFINE_double(hand_alpha_heatmap,       0.7,            "Analogous to `alpha_heatmap` but applied to hand.");
 // Result Saving
 DEFINE_string(write_images,             "",             "Directory to write rendered frames in `write_images_format` image format.");
 DEFINE_string(write_images_format,      "png",          "File extension and format for `write_images`, e.g. png, jpg or bmp. Check the OpenCV"
@@ -130,11 +139,7 @@ DEFINE_string(write_heatmaps,           "",             "Directory to write heat
 DEFINE_string(write_heatmaps_format,    "png",          "File extension and format for `write_heatmaps`, analogous to `write_images_format`."
                                                         " Recommended `png` or any compressed and lossless format.");
 
-// The W-classes can be implemented either as a template or as simple classes given
-// that the user usually knows which kind of data he will move between the queues,
-// in this case we assume a std::shared_ptr of a std::vector of op::Datum
-
-// This worker will just read and return all the jpg files in a directory
+// This worker will just subscribe to the image topic specified above.
 class UserInputClass
 {
     private:
@@ -193,7 +198,7 @@ class UserInputClass
         }
 };
 
-// This worker will just read and return all the jpg files in a directory
+// This worker will just display the result
 class UserOutputClass
 {
 public:
@@ -212,14 +217,14 @@ public:
     }
 };
 
-int openPoseROSTutorialWithFace()
+int openPoseROSTutorialWithFaceAndHands()
 {
     // logging_level
     op::check(0 <= FLAGS_logging_level && FLAGS_logging_level <= 255, "Wrong logging_level value.", __LINE__, __FUNCTION__, __FILE__);
     op::ConfigureLog::setPriorityThreshold((op::Priority)FLAGS_logging_level);
     // op::ConfigureLog::setPriorityThreshold(op::Priority::None); // To print all logging messages
 
-    op::log("OpenPose ROS Node with Faces", op::Priority::High);
+    op::log("OpenPose ROS Node with Face and Hands", op::Priority::High);
     const auto timerBegin = std::chrono::high_resolution_clock::now();
 
     // Applying user defined configuration - Google flags to program variables
@@ -246,18 +251,18 @@ int openPoseROSTutorialWithFace()
     op::Wrapper<std::vector<op::Datum>> opWrapper{op::ThreadManagerMode::Asynchronous};
     // Pose configuration (use WrapperStructPose{} for default and recommended configuration)
     const op::WrapperStructPose wrapperStructPose{netInputSize, outputSize, keypointScale, FLAGS_num_gpu,
-                                                  FLAGS_num_gpu_start, FLAGS_num_scales, (float)FLAGS_scale_gap,
+                                                  FLAGS_num_gpu_start, FLAGS_scale_number, (float)FLAGS_scale_gap,
                                                   op::flagsToRenderMode(FLAGS_render_pose), poseModel,
                                                   !FLAGS_disable_blending, (float)FLAGS_alpha_pose,
                                                   (float)FLAGS_alpha_heatmap, FLAGS_part_to_show, FLAGS_model_folder,
-                                                  heatMapTypes, heatMapScale};
+                                                  heatMapTypes, heatMapScale, (float)FLAGS_render_threshold};
     // Face configuration (use op::WrapperStructFace{} to disable it)
-    const op::WrapperStructFace wrapperStructFace{FLAGS_face, faceNetInputSize, op::flagsToRenderMode(FLAGS_render_face, FLAGS_render_pose),
-                                                  (float)FLAGS_alpha_face, (float)FLAGS_alpha_heatmap_face};
+    const op::WrapperStructFace wrapperStructFace{FLAGS_face, faceNetInputSize, op::flagsToRenderMode(FLAGS_face_render, FLAGS_render_pose),
+                                                  (float)FLAGS_face_alpha_pose, (float)FLAGS_face_alpha_heatmap, (float)FLAGS_face_render_threshold};
     // Hand configuration (use op::WrapperStructHand{} to disable it)
-    const op::WrapperStructHand wrapperStructHand{FLAGS_hand, handNetInputSize, op::flagsToDetectionMode(FLAGS_hand_detection_mode),
-                                                  op::flagsToRenderMode(FLAGS_render_hand, FLAGS_render_pose), (float)FLAGS_alpha_hand,
-                                                  (float)FLAGS_alpha_heatmap_hand};
+    const op::WrapperStructHand wrapperStructHand{FLAGS_hand, handNetInputSize, FLAGS_hand_scale_number, (float)FLAGS_hand_scale_range,
+                                                  FLAGS_hand_tracking, op::flagsToRenderMode(FLAGS_hand_render, FLAGS_render_pose),
+                                                  (float)FLAGS_hand_alpha_pose, (float)FLAGS_hand_alpha_heatmap, (float)FLAGS_hand_render_threshold};
     // Consumer (comment or use default argument to disable any output)
     const bool displayGui = false;
     const bool guiVerbose = false;
@@ -310,14 +315,14 @@ int openPoseROSTutorialWithFace()
 int main(int argc, char *argv[])
 {
     // Initializing google logging (Caffe uses it for logging)
-    google::InitGoogleLogging("openpose_ros_node_with_face");
+    google::InitGoogleLogging("openpose_ros_node_with_face_and_hands");
 
     // Parsing command line flags
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     // Initializing ros
-    ros::init(argc, argv, "openpose_ros_node_with_face");
+    ros::init(argc, argv, "openpose_ros_node_with_face_and_hands");
 
-    // Running openPoseROSTutorialWithFace
-    return openPoseROSTutorialWithFace();
+    // Running openPoseROSTutorialWithFaceAndHands
+    return openPoseROSTutorialWithFaceAndHands();
 }

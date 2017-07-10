@@ -37,15 +37,15 @@ Tested on:
    set(CAFFE_DIR /path/to/caffe)
    set(OPENPOSE_DIR /path/to/openpose)
    ```
-7. Modify the model_folder line in src/openpose_ros_node.cpp and src/openpose_ros_node_with_face.cpp to where openpose is installed.
+7. Modify the model_folder line in src/openpose_ros_node.cpp and src/openpose_ros_node_with_face_and_hands.cpp to where openpose is installed.
    ```bash
    DEFINE_string(model_folder,             "/path/to/openpose/models/",      "Folder where the pose models (COCO and MPI) are located.");
    ```
-8. Modify the image_topic line in src/openpose_ros_node.cpp and src/openpose_ros_node_with_face.cpp to the image_topic you want to process.
+8. Modify the image_topic line in src/openpose_ros_node.cpp and src/openpose_ros_node_with_face_and_hands.cpp to the image_topic you want to process.
    ```bash
    DEFINE_string(camera_topic,             "/camera/image_raw",      "Image topic that OpenPose will process.");
    ```
-9. Modify the other parameters in src/openpose_ros_node.cpp and src/openpose_ros_node_with_face.cpp to your liking such as the net_resolution and resolution of the image.
+9. Modify the other parameters in src/openpose_ros_node.cpp and src/openpose_ros_node_with_face_and_hands.cpp to your liking such as the net_resolution and resolution of the image.
 10. Run catkin_make from your catkin_workspace directory. (It will fail the first time so run it twice.)
 
 ### Potential Installation Issues
@@ -55,5 +55,5 @@ Tested on:
 ## Running
 ```bash
 source catkin_workspace/devel/setup.bash
-rosrun openpose_ros openpose_ros_node or rosrun openpose_ros openpose_ros_node_with_face
+rosrun openpose_ros openpose_ros_node or rosrun openpose_ros openpose_ros_node_with_face_and_hands
 ```
