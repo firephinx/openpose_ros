@@ -5,32 +5,39 @@
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
 
-#include <chrono> // `std::chrono::` functions and classes, e.g. std::chrono::milliseconds
-#include <string> // std::string
-
 #include <opencv2/core/core.hpp> // cv::Mat & cv::Size
 
-// ------------------------- OpenPose Library ROS Tutorial - Pose -------------------------
-// This first example shows the user how to:
-    // 1. Subscribe to a ros image topic
-    // 2. Extract the pose of that image (`pose` module)
-    // 3. Render the pose on a resized copy of the input image (`pose` module)
-    // 4. Display the rendered pose (`gui` module)
+// ------------------------- OpenPose Library Tutorial - Wrapper - Example 1 - Asynchronous -------------------------
+// Asynchronous mode: ideal for fast prototyping when performance is not an issue. The user emplaces/pushes and pops frames from the OpenPose wrapper
+// when he desires to.
+
+// This example shows the user how to use the OpenPose wrapper class:
+    // 1. User reads images
+    // 2. Extract and render keypoint / heatmap / PAF of that image
+    // 3. Save the results on disk
+    // 4. User displays the rendered pose
+    // Everything in a multi-thread scenario
 // In addition to the previous OpenPose modules, we also need to use:
-    // 1. `core` module: for the Array<float> class that the `pose` module needs
+    // 1. `core` module:
+        // For the Array<float> class that the `pose` module needs
+        // For the Datum struct that the `thread` module sends between the queues
     // 2. `utilities` module: for the error & logging functions, i.e. op::error & op::log respectively
+// This file should only be used for the user to take specific examples.
 
-// 3rdparty dependencies
-#include <gflags/gflags.h> // DEFINE_bool, DEFINE_int32, DEFINE_int64, DEFINE_uint64, DEFINE_double, DEFINE_string
-#include <glog/logging.h> // google::InitGoogleLogging
+// C++ std library dependencies
+#include <chrono> // `std::chrono::` functions and classes, e.g. std::chrono::milliseconds
+#include <thread> // std::this_thread
+// Other 3rdparty dependencies
+// GFlags: DEFINE_bool, _int32, _int64, _uint64, _double, _string
+#include <gflags/gflags.h>
+// Allow Google Flags in Ubuntu 14
+#ifndef GFLAGS_GFLAGS_H_
+    namespace gflags = google;
+#endif
 // OpenPose dependencies
-#include <openpose/core/headers.hpp>
-#include <openpose/filestream/headers.hpp>
-#include <openpose/gui/headers.hpp>
-#include <openpose/pose/headers.hpp>
-#include <openpose/utilities/headers.hpp>
+#include <openpose/headers.hpp>
 
-// See all the available parameter options withe the `--help` flag. E.g. `./build/examples/openpose/openpose.bin --help`.
+// See all the available parameter options withe the `--help` flag. E.g. `build/examples/openpose/openpose.bin --help`
 // Note: This command will show you flags for other unnecessary 3rdparty files. Check only the flags for the OpenPose
 // executable. E.g. for `openpose.bin`, look for `Flags from examples/openpose/openpose.cpp:`.
 // Debugging
@@ -41,29 +48,116 @@ DEFINE_int32(logging_level,             3,              "The logging level. Inte
 DEFINE_string(camera_topic,             "/camera/image_raw",      "Image topic that OpenPose will process.");
 // OpenPose
 DEFINE_string(model_folder,             "/path/to/openpose/models/",      "Folder path (absolute or relative) where the models (pose, face, ...) are located.");
-DEFINE_string(model_pose,               "COCO",         "Model to be used (e.g. COCO, MPI, MPI_4_layers).");
-DEFINE_string(net_resolution,           "656x368",      "Multiples of 16. If it is increased, the accuracy potentially increases. If it is decreased,"
-                                                        " the speed increases. For maximum speed-accuracy balance, it should keep the closest aspect"
-                                                        " ratio possible to the images or videos to be processed. E.g. the default `656x368` is"
-                                                        " optimal for 16:9 videos, e.g. full HD (1980x1080) and HD (1280x720) videos.");
-DEFINE_string(resolution,               "1280x720",     "The image resolution (display and output). Use \"-1x-1\" to force the program to use the"
-                                                        " default images resolution.");
+DEFINE_string(output_resolution,        "-1x-1",        "The image resolution (display and output). Use \"-1x-1\" to force the program to use the"
+                                                        " input image resolution.");
+DEFINE_int32(num_gpu,                   -1,             "The number of GPU devices to use. If negative, it will use all the available GPUs in your"
+                                                        " machine.");
 DEFINE_int32(num_gpu_start,             0,              "GPU device start number.");
+DEFINE_int32(keypoint_scale,            0,              "Scaling of the (x,y) coordinates of the final pose data array, i.e. the scale of the (x,y)"
+                                                        " coordinates that will be saved with the `write_keypoint` & `write_keypoint_json` flags."
+                                                        " Select `0` to scale it to the original source resolution, `1`to scale it to the net output"
+                                                        " size (set with `net_resolution`), `2` to scale it to the final output size (set with"
+                                                        " `resolution`), `3` to scale it in the range [0,1], and 4 for range [-1,1]. Non related"
+                                                        " with `scale_number` and `scale_gap`.");
+// OpenPose Body Pose
+DEFINE_bool(body_disable,               false,          "Disable body keypoint detection. Option only possible for faster (but less accurate) face"
+                                                        " keypoint detection.");
+DEFINE_string(model_pose,               "COCO",         "Model to be used. E.g. `COCO` (18 keypoints), `MPI` (15 keypoints, ~10% faster), "
+                                                        "`MPI_4_layers` (15 keypoints, even faster but less accurate).");
+DEFINE_string(net_resolution,           "656x368",      "Multiples of 16. If it is increased, the accuracy potentially increases. If it is"
+                                                        " decreased, the speed increases. For maximum speed-accuracy balance, it should keep the"
+                                                        " closest aspect ratio possible to the images or videos to be processed. Using `-1` in"
+                                                        " any of the dimensions, OP will choose the optimal aspect ratio depending on the user's"
+                                                        " input value. E.g. the default `-1x368` is equivalent to `656x368` in 16:9 resolutions,"
+                                                        " e.g. full HD (1980x1080) and HD (1280x720) resolutions.");
+DEFINE_int32(scale_number,              1,              "Number of scales to average.");
 DEFINE_double(scale_gap,                0.3,            "Scale gap between scales. No effect unless scale_number > 1. Initial scale is always 1."
                                                         " If you want to change the initial scale, you actually want to multiply the"
                                                         " `net_resolution` by your desired initial scale.");
-DEFINE_int32(scale_number,              1,              "Number of scales to average.");
+DEFINE_bool(heatmaps_add_parts,         false,          "If true, it will add the body part heatmaps to the final op::Datum::poseHeatMaps array,"
+                                                        " and analogously face & hand heatmaps to op::Datum::faceHeatMaps & op::Datum::handHeatMaps"
+                                                        " (program speed will decrease). Not required for our library, enable it only if you intend"
+                                                        " to process this information later. If more than one `add_heatmaps_X` flag is enabled, it"
+                                                        " will place then in sequential memory order: body parts + bkg + PAFs. It will follow the"
+                                                        " order on POSE_BODY_PART_MAPPING in `include/openpose/pose/poseParameters.hpp`.");
+DEFINE_bool(heatmaps_add_bkg,           false,          "Same functionality as `add_heatmaps_parts`, but adding the heatmap corresponding to"
+                                                        " background.");
+DEFINE_bool(heatmaps_add_PAFs,          false,          "Same functionality as `add_heatmaps_parts`, but adding the PAFs.");
+DEFINE_int32(heatmaps_scale,            2,              "Set 0 to scale op::Datum::poseHeatMaps in the range [0,1], 1 for [-1,1]; and 2 for integer"
+                                                        " rounded [0,255].");
+// OpenPose Face
+DEFINE_bool(face,                       false,          "Enables face keypoint detection. It will share some parameters from the body pose, e.g."
+                                                        " `model_folder`. Note that this will considerable slow down the performance and increse"
+                                                        " the required GPU memory. In addition, the greater number of people on the image, the"
+                                                        " slower OpenPose will be.");
+DEFINE_string(face_net_resolution,      "368x368",      "Multiples of 16 and squared. Analogous to `net_resolution` but applied to the face keypoint"
+                                                        " detector. 320x320 usually works fine while giving a substantial speed up when multiple"
+                                                        " faces on the image.");
+// OpenPose Hand
+DEFINE_bool(hand,                       false,          "Enables hand keypoint detection. It will share some parameters from the body pose, e.g."
+                                                        " `model_folder`. Analogously to `--face`, it will also slow down the performance, increase"
+                                                        " the required GPU memory and its speed depends on the number of people.");
+DEFINE_string(hand_net_resolution,      "368x368",      "Multiples of 16 and squared. Analogous to `net_resolution` but applied to the hand keypoint"
+                                                        " detector.");
+DEFINE_int32(hand_scale_number,         1,              "Analogous to `scale_number` but applied to the hand keypoint detector. Our best results"
+                                                        " were found with `hand_scale_number` = 6 and `hand_scale_range` = 0.4");
+DEFINE_double(hand_scale_range,         0.4,            "Analogous purpose than `scale_gap` but applied to the hand keypoint detector. Total range"
+                                                        " between smallest and biggest scale. The scales will be centered in ratio 1. E.g. if"
+                                                        " scaleRange = 0.4 and scalesNumber = 2, then there will be 2 scales, 0.8 and 1.2.");
+DEFINE_bool(hand_tracking,              false,          "Adding hand tracking might improve hand keypoints detection for webcam (if the frame rate"
+                                                        " is high enough, i.e. >7 FPS per GPU) and video. This is not person ID tracking, it"
+                                                        " simply looks for hands in positions at which hands were located in previous frames, but"
+                                                        " it does not guarantee the same person ID among frames");
 // OpenPose Rendering
-DEFINE_bool(disable_blending,           false,          "If blending is enabled, it will merge the results with the original frame. If disabled, it"
-                                                        " will only display the results.");
+DEFINE_int32(part_to_show,              0,              "Prediction channel to visualize (default: 0). 0 for all the body parts, 1-18 for each body"
+                                                        " part heat map, 19 for the background heat map, 20 for all the body part heat maps"
+                                                        " together, 21 for all the PAFs, 22-40 for each body part pair PAF");
+DEFINE_bool(disable_blending,           false,          "If enabled, it will render the results (keypoint skeletons or heatmaps) on a black"
+                                                        " background, instead of being rendered into the original image. Related: `part_to_show`,"
+                                                        " `alpha_pose`, and `alpha_pose`.");
+// OpenPose Rendering Pose
 DEFINE_double(render_threshold,         0.05,           "Only estimated keypoints whose score confidences are higher than this threshold will be"
                                                         " rendered. Generally, a high threshold (> 0.5) will only render very clear body parts;"
                                                         " while small thresholds (~0.1) will also output guessed and occluded keypoints, but also"
                                                         " more false positives (i.e. wrong detections).");
+DEFINE_int32(render_pose,               2,              "Set to 0 for no rendering, 1 for CPU rendering (slightly faster), and 2 for GPU rendering"
+                                                        " (slower but greater functionality, e.g. `alpha_X` flags). If rendering is enabled, it will"
+                                                        " render both `outputData` and `cvOutputData` with the original image and desired body part"
+                                                        " to be shown (i.e. keypoints, heat maps or PAFs).");
 DEFINE_double(alpha_pose,               0.6,            "Blending factor (range 0-1) for the body part rendering. 1 will show it completely, 0 will"
                                                         " hide it. Only valid for GPU rendering.");
+DEFINE_double(alpha_heatmap,            0.7,            "Blending factor (range 0-1) between heatmap and original frame. 1 will only show the"
+                                                        " heatmap, 0 will only show the frame. Only valid for GPU rendering.");
+// OpenPose Rendering Face
+DEFINE_double(face_render_threshold,    0.4,            "Analogous to `render_threshold`, but applied to the face keypoints.");
+DEFINE_int32(face_render,               -1,             "Analogous to `render_pose` but applied to the face. Extra option: -1 to use the same"
+                                                        " configuration that `render_pose` is using.");
+DEFINE_double(face_alpha_pose,          0.6,            "Analogous to `alpha_pose` but applied to face.");
+DEFINE_double(face_alpha_heatmap,       0.7,            "Analogous to `alpha_heatmap` but applied to face.");
+// OpenPose Rendering Hand
+DEFINE_double(hand_render_threshold,    0.2,            "Analogous to `render_threshold`, but applied to the hand keypoints.");
+DEFINE_int32(hand_render,               -1,             "Analogous to `render_pose` but applied to the hand. Extra option: -1 to use the same"
+                                                        " configuration that `render_pose` is using.");
+DEFINE_double(hand_alpha_pose,          0.6,            "Analogous to `alpha_pose` but applied to hand.");
+DEFINE_double(hand_alpha_heatmap,       0.7,            "Analogous to `alpha_heatmap` but applied to hand.");
+// Result Saving
+DEFINE_string(write_images,             "",             "Directory to write rendered frames in `write_images_format` image format.");
+DEFINE_string(write_images_format,      "png",          "File extension and format for `write_images`, e.g. png, jpg or bmp. Check the OpenCV"
+                                                        " function cv::imwrite for all compatible extensions.");
+DEFINE_string(write_video,              "",             "Full file path to write rendered frames in motion JPEG video format. It might fail if the"
+                                                        " final path does not finish in `.avi`. It internally uses cv::VideoWriter.");
+DEFINE_string(write_keypoint,           "",             "Directory to write the people body pose keypoint data. Set format with `write_keypoint_format`.");
+DEFINE_string(write_keypoint_format,    "yml",          "File extension and format for `write_keypoint`: json, xml, yaml & yml. Json not available"
+                                                        " for OpenCV < 3.0, use `write_keypoint_json` instead.");
+DEFINE_string(write_keypoint_json,      "",             "Directory to write people pose data in *.json format, compatible with any OpenCV version.");
+DEFINE_string(write_coco_json,          "",             "Full file path to write people pose data with *.json COCO validation format.");
+DEFINE_string(write_heatmaps,           "",             "Directory to write body pose heatmaps in *.png format. At least 1 `add_heatmaps_X` flag"
+                                                        " must be enabled.");
+DEFINE_string(write_heatmaps_format,    "png",          "File extension and format for `write_heatmaps`, analogous to `write_images_format`."
+                                                        " Recommended `png` or any compressed and lossless format.");
 
-class RosImgSub
+// This worker will just subscribe to the image topic specified above.
+class UserIOClass
 {
     private:
         ros::NodeHandle nh_;
@@ -72,14 +166,14 @@ class RosImgSub
         cv_bridge::CvImagePtr cv_img_ptr_;
 
     public:
-        RosImgSub(const std::string& image_topic): it_(nh_)
+        UserIOClass(const std::string& image_topic): it_(nh_)
         {
             // Subscribe to input video feed and publish output video feed
-            image_sub_ = it_.subscribe(image_topic, 1, &RosImgSub::convertImage, this);
+            image_sub_ = it_.subscribe(image_topic, 1, &UserIOClass::convertImage, this);
             cv_img_ptr_ = nullptr;
         }
 
-        ~RosImgSub(){}
+        ~UserIOClass(){}
 
         void convertImage(const sensor_msgs::ImageConstPtr& msg)
         {
@@ -94,110 +188,227 @@ class RosImgSub
             }
         }
 
+        std::shared_ptr<std::vector<op::Datum>> createDatum()
+        {
+            // Close program when empty frame
+            if (cv_img_ptr_ == nullptr)
+            {
+                return nullptr;
+            }
+            else // if (cv_img_ptr_ == nullptr)
+            {
+                // Create new datum
+                auto datumsPtr = std::make_shared<std::vector<op::Datum>>();
+                datumsPtr->emplace_back();
+                auto& datum = datumsPtr->at(0);
+
+                // Fill datum
+                datum.cvInputData = cv_img_ptr_->image;
+
+                return datumsPtr;
+            }
+        }
+
         cv_bridge::CvImagePtr& getCvImagePtr()
         {
             return cv_img_ptr_;
         }
 
+        bool display(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr)
+        {
+            // User's displaying/saving/other processing here
+                // datum.cvOutputData: rendered frame with pose or heatmaps
+                // datum.poseKeypoints: Array<float> with the estimated pose
+            char key = ' ';
+            if (datumsPtr != nullptr && !datumsPtr->empty())
+            {
+                cv::imshow("User worker GUI", datumsPtr->at(0).cvOutputData);
+                // Display image and sleeps at least 1 ms (it usually sleeps ~5-10 msec to display the image)
+                key = (char)cv::waitKey(1);
+            }
+            else
+                op::log("Nullptr or empty datumsPtr found.", op::Priority::High, __LINE__, __FUNCTION__, __FILE__);
+            return (key == 27);
+        }
+
+        void printKeypoints(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr)
+        {
+            // Example: How to use the pose keypoints
+            if (datumsPtr != nullptr && !datumsPtr->empty())
+            {
+                op::log("\nKeypoints:");
+                // Accesing each element of the keypoints
+                const auto& poseKeypoints = datumsPtr->at(0).poseKeypoints;
+                op::log("Person pose keypoints:");
+                for (auto person = 0 ; person < poseKeypoints.getSize(0) ; person++)
+                {
+                    op::log("Person " + std::to_string(person) + " (x, y, score):");
+                    for (auto bodyPart = 0 ; bodyPart < poseKeypoints.getSize(1) ; bodyPart++)
+                    {
+                        std::string valueToPrint;
+                        for (auto xyscore = 0 ; xyscore < poseKeypoints.getSize(2) ; xyscore++)
+                            valueToPrint += std::to_string(   poseKeypoints[{person, bodyPart, xyscore}]   ) + " ";
+                        op::log(valueToPrint);
+                    }
+                }
+                op::log(" ");
+                // Alternative: just getting std::string equivalent
+                op::log("Face keypoints: " + datumsPtr->at(0).faceKeypoints.toString());
+                op::log("Left hand keypoints: " + datumsPtr->at(0).handKeypoints[0].toString());
+                op::log("Right hand keypoints: " + datumsPtr->at(0).handKeypoints[1].toString());
+                // Heatmaps
+                const auto& poseHeatMaps = datumsPtr->at(0).poseHeatMaps;
+                if (!poseHeatMaps.empty())
+                {
+                    op::log("Pose heatmaps size: [" + std::to_string(poseHeatMaps.getSize(0)) + ", "
+                            + std::to_string(poseHeatMaps.getSize(1)) + ", "
+                            + std::to_string(poseHeatMaps.getSize(2)) + "]");
+                    const auto& faceHeatMaps = datumsPtr->at(0).faceHeatMaps;
+                    op::log("Face heatmaps size: [" + std::to_string(faceHeatMaps.getSize(0)) + ", "
+                            + std::to_string(faceHeatMaps.getSize(1)) + ", "
+                            + std::to_string(faceHeatMaps.getSize(2)) + ", "
+                            + std::to_string(faceHeatMaps.getSize(3)) + "]");
+                    const auto& handHeatMaps = datumsPtr->at(0).handHeatMaps;
+                    op::log("Left hand heatmaps size: [" + std::to_string(handHeatMaps[0].getSize(0)) + ", "
+                            + std::to_string(handHeatMaps[0].getSize(1)) + ", "
+                            + std::to_string(handHeatMaps[0].getSize(2)) + ", "
+                            + std::to_string(handHeatMaps[0].getSize(3)) + "]");
+                    op::log("Right hand heatmaps size: [" + std::to_string(handHeatMaps[1].getSize(0)) + ", "
+                            + std::to_string(handHeatMaps[1].getSize(1)) + ", "
+                            + std::to_string(handHeatMaps[1].getSize(2)) + ", "
+                            + std::to_string(handHeatMaps[1].getSize(3)) + "]");
+                }
+            }
+            else
+                op::log("Nullptr or empty datumsPtr found.", op::Priority::High, __LINE__, __FUNCTION__, __FILE__);
+        }
 };
 
-int openPoseROSTutorial()
+int openPoseROS()
 {
-    op::log("OpenPose ROS Node", op::Priority::High);
-    // ------------------------- INITIALIZATION -------------------------
-    // Step 1 - Set logging level
-        // - 0 will output all the logging messages
-        // - 255 will output nothing
-    op::check(0 <= FLAGS_logging_level && FLAGS_logging_level <= 255, "Wrong logging_level value.", __LINE__, __FUNCTION__, __FILE__);
+    // logging_level
+    op::check(0 <= FLAGS_logging_level && FLAGS_logging_level <= 255, "Wrong logging_level value.",
+              __LINE__, __FUNCTION__, __FILE__);
     op::ConfigureLog::setPriorityThreshold((op::Priority)FLAGS_logging_level);
-    op::log("", op::Priority::Low, __LINE__, __FUNCTION__, __FILE__);
-    // Step 2 - Read Google flags (user defined configuration)
+    // op::ConfigureLog::setPriorityThreshold(op::Priority::None); // To print all logging messages
+
+    op::log("Starting pose estimation demo.", op::Priority::High);
+    const auto timerBegin = std::chrono::high_resolution_clock::now();
+
+    // Applying user defined configuration - Google flags to program variables
     // outputSize
-    const auto outputSize = op::flagsToPoint(FLAGS_resolution, "1280x720");
+    const auto outputSize = op::flagsToPoint(FLAGS_output_resolution, "-1x-1");
     // netInputSize
-    const auto netInputSize = op::flagsToPoint(FLAGS_net_resolution, "656x368");
-    // netOutputSize
-    const auto netOutputSize = netInputSize;
+    const auto netInputSize = op::flagsToPoint(FLAGS_net_resolution, "-1x368");
+    // faceNetInputSize
+    const auto faceNetInputSize = op::flagsToPoint(FLAGS_face_net_resolution, "368x368 (multiples of 16)");
+    // handNetInputSize
+    const auto handNetInputSize = op::flagsToPoint(FLAGS_hand_net_resolution, "368x368 (multiples of 16)");
     // poseModel
     const auto poseModel = op::flagsToPoseModel(FLAGS_model_pose);
-    // Check no contradictory flags enabled
-    if (FLAGS_alpha_pose < 0. || FLAGS_alpha_pose > 1.)
-        op::error("Alpha value for blending must be in the range [0,1].", __LINE__, __FUNCTION__, __FILE__);
-    if (FLAGS_scale_gap <= 0. && FLAGS_scale_number > 1)
-        op::error("Incompatible flag configuration: scale_gap must be greater than 0 or scale_number = 1.", __LINE__, __FUNCTION__, __FILE__);
+    // keypointScale
+    const auto keypointScale = op::flagsToScaleMode(FLAGS_keypoint_scale);
+    // heatmaps to add
+    const auto heatMapTypes = op::flagsToHeatMaps(FLAGS_heatmaps_add_parts, FLAGS_heatmaps_add_bkg,
+                                                  FLAGS_heatmaps_add_PAFs);
+    op::check(FLAGS_heatmaps_scale >= 0 && FLAGS_heatmaps_scale <= 2, "Non valid `heatmaps_scale`.",
+              __LINE__, __FUNCTION__, __FILE__);
+    const auto heatMapScale = (FLAGS_heatmaps_scale == 0 ? op::ScaleMode::PlusMinusOne
+                              : (FLAGS_heatmaps_scale == 1 ? op::ScaleMode::ZeroToOne : op::ScaleMode::UnsignedChar ));
+    // Enabling Google Logging
+    const bool enableGoogleLogging = true;
     // Logging
     op::log("", op::Priority::Low, __LINE__, __FUNCTION__, __FILE__);
-    // Step 3 - Initialize all required classes
-    op::CvMatToOpInput cvMatToOpInput{netInputSize, FLAGS_scale_number, (float)FLAGS_scale_gap};
-    op::CvMatToOpOutput cvMatToOpOutput{outputSize};
-    op::PoseExtractorCaffe poseExtractorCaffe{netInputSize, netOutputSize, outputSize, FLAGS_scale_number, poseModel,
-                                              FLAGS_model_folder, FLAGS_num_gpu_start};
-    op::PoseRenderer poseRenderer{netOutputSize, outputSize, poseModel, nullptr, (float)FLAGS_render_threshold,
-                                  !FLAGS_disable_blending, (float)FLAGS_alpha_pose};
-    op::OpOutputToCvMat opOutputToCvMat{outputSize};
-    // Step 4 - Initialize resources on desired thread (in this case single thread, i.e. we init resources here)
-    poseExtractorCaffe.initializationOnThread();
-    poseRenderer.initializationOnThread();
 
-    // Step 5 - Initialize the image subscriber
-    RosImgSub ris(FLAGS_camera_topic);
+    // Configure OpenPose
+    op::Wrapper<std::vector<op::Datum>> opWrapper{op::ThreadManagerMode::Asynchronous};
+    // Pose configuration (use WrapperStructPose{} for default and recommended configuration)
+    const op::WrapperStructPose wrapperStructPose{!FLAGS_body_disable, netInputSize, outputSize, keypointScale,
+                                                  FLAGS_num_gpu, FLAGS_num_gpu_start, FLAGS_scale_number,
+                                                  (float)FLAGS_scale_gap, op::flagsToRenderMode(FLAGS_render_pose),
+                                                  poseModel, !FLAGS_disable_blending, (float)FLAGS_alpha_pose,
+                                                  (float)FLAGS_alpha_heatmap, FLAGS_part_to_show, FLAGS_model_folder,
+                                                  heatMapTypes, heatMapScale, (float)FLAGS_render_threshold,
+                                                  enableGoogleLogging};
+    // Face configuration (use op::WrapperStructFace{} to disable it)
+    const op::WrapperStructFace wrapperStructFace{FLAGS_face, faceNetInputSize,
+                                                  op::flagsToRenderMode(FLAGS_face_render, FLAGS_render_pose),
+                                                  (float)FLAGS_face_alpha_pose, (float)FLAGS_face_alpha_heatmap,
+                                                  (float)FLAGS_face_render_threshold};
+    // Hand configuration (use op::WrapperStructHand{} to disable it)
+    const op::WrapperStructHand wrapperStructHand{FLAGS_hand, handNetInputSize, FLAGS_hand_scale_number,
+                                                  (float)FLAGS_hand_scale_range, FLAGS_hand_tracking,
+                                                  op::flagsToRenderMode(FLAGS_hand_render, FLAGS_render_pose),
+                                                  (float)FLAGS_hand_alpha_pose, (float)FLAGS_hand_alpha_heatmap,
+                                                  (float)FLAGS_hand_render_threshold};
+    // Consumer (comment or use default argument to disable any output)
+    const bool displayGui = false;
+    const bool guiVerbose = false;
+    const bool fullScreen = false;
+    const op::WrapperStructOutput wrapperStructOutput{displayGui, guiVerbose, fullScreen, FLAGS_write_keypoint,
+                                                      op::stringToDataFormat(FLAGS_write_keypoint_format), FLAGS_write_keypoint_json,
+                                                      FLAGS_write_coco_json, FLAGS_write_images, FLAGS_write_images_format, FLAGS_write_video,
+                                                      FLAGS_write_heatmaps, FLAGS_write_heatmaps_format};
+    // Configure wrapper
+    op::log("Configuring OpenPose wrapper.", op::Priority::Low, __LINE__, __FUNCTION__, __FILE__);
+    opWrapper.configure(wrapperStructPose, wrapperStructFace, wrapperStructHand, op::WrapperStructInput{},
+                        wrapperStructOutput);
+    // Set to single-thread running (e.g. for debugging purposes)
+    // opWrapper.disableMultiThreading();
 
-    int frame_count = 0;
-    const std::chrono::high_resolution_clock::time_point timerBegin = std::chrono::high_resolution_clock::now();
+    op::log("Starting thread(s)", op::Priority::High);
+    opWrapper.start();
 
-    ros::spinOnce();
+    op::log("Starting thread(s)", op::Priority::High);
+    opWrapper.start();
 
-    // Step 6 - Continuously process images from image subscriber
-    while (ros::ok())
+    // User processing
+    UserIOClass userIOClass(FLAGS_camera_topic);
+    bool userWantsToExit = false;
+    while (!userWantsToExit && ros::ok())
     {
-        // ------------------------- POSE ESTIMATION AND RENDERING -------------------------
-        // Step 1 - Get cv_image ptr and check that it is not null
-        cv_bridge::CvImagePtr cvImagePtr = ris.getCvImagePtr();
-        if(cvImagePtr != nullptr)
+        // Push frame
+        auto datumToProcess = userIOClass.createDatum();
+        if (datumToProcess != nullptr)
         {
-            cv::Mat inputImage = cvImagePtr->image;
-    
-            // Step 2 - Format input image to OpenPose input and output formats
-            op::Array<float> netInputArray;
-            std::vector<float> scaleRatios;
-            std::tie(netInputArray, scaleRatios) = cvMatToOpInput.format(inputImage);
-            double scaleInputToOutput;
-            op::Array<float> outputArray;
-            std::tie(scaleInputToOutput, outputArray) = cvMatToOpOutput.format(inputImage);
-            // Step 3 - Estimate poseKeypoints
-            poseExtractorCaffe.forwardPass(netInputArray, {inputImage.cols, inputImage.rows}, scaleRatios);
-            const auto poseKeypoints = poseExtractorCaffe.getPoseKeypoints();
-            // Step 4 - Render poseKeypoints
-            poseRenderer.renderPose(outputArray, poseKeypoints);
-            // Step 5 - OpenPose output format to cv::Mat
-            auto outputImage = opOutputToCvMat.formatToCvMat(outputArray);
-
-            // ------------------------- SHOWING RESULT AND CLOSING -------------------------
-            // Step 1 - Show results
-            cv::imshow("OpenPose ROS", outputImage);
-            cv::waitKey(1);
-            frame_count++;
+            auto successfullyEmplaced = opWrapper.waitAndEmplace(datumToProcess);
+            // Pop frame
+            std::shared_ptr<std::vector<op::Datum>> datumProcessed;
+            if (successfullyEmplaced && opWrapper.waitAndPop(datumProcessed))
+            {
+                userWantsToExit = userIOClass.display(datumProcessed);
+                userIOClass.printKeypoints(datumProcessed);
+            }
+            else
+                op::log("Processed datum could not be emplaced.", op::Priority::High,
+                        __LINE__, __FUNCTION__, __FILE__);
         }
+
         ros::spinOnce();
     }
 
-    // Measuring total time
-    const double totalTimeSec = (double)std::chrono::duration_cast<std::chrono::nanoseconds>
-                              (std::chrono::high_resolution_clock::now()-timerBegin).count() * 1e-9;
-    const std::string message = "Real-time pose estimation demo successfully finished. Total time: " 
-                                + std::to_string(totalTimeSec) + " seconds. " + std::to_string(frame_count)
-                                + " frames processed. Average fps is " + std::to_string(frame_count/totalTimeSec) + ".";
-    op::log(message, op::Priority::Max);
+    op::log("Stopping thread(s)", op::Priority::High);
+    opWrapper.stop();
 
-    // Return successful message
+    // Measuring total time
+    const auto now = std::chrono::high_resolution_clock::now();
+    const auto totalTimeSec = (double)std::chrono::duration_cast<std::chrono::nanoseconds>(now-timerBegin).count()
+                            * 1e-9;
+    const auto message = "Real-time pose estimation demo successfully finished. Total time: "
+                       + std::to_string(totalTimeSec) + " seconds.";
+    op::log(message, op::Priority::High);
+
     return 0;
 }
 
-int main(int argc, char** argv)
+int main(int argc, char *argv[])
 {
-  google::InitGoogleLogging("openpose_ros_node");
-  gflags::ParseCommandLineFlags(&argc, &argv, true);
-  ros::init(argc, argv, "openpose_ros_node");
+    // Parsing command line flags
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-  return openPoseROSTutorial();
+    // Initializing ros
+    ros::init(argc, argv, "openpose_ros_node");
+
+    // Running openPoseROS
+    return openPoseROS();
 }
