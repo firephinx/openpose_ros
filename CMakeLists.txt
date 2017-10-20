@@ -10,6 +10,8 @@ add_definitions(-std=c++11)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
+  std_msgs
+  message_generation
   sensor_msgs
   cv_bridge
   image_transport
@@ -60,11 +62,18 @@ set(OPENPOSE_LINK_LIBRARY ${OPENPOSE_DIR}/build/lib/libopenpose.so)
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+  FILES
+  OpenPoseHumanBodyAndFace.msg
+  OpenPoseHumanBodyAndHands.msg
+  OpenPoseHumanBodyHandsAndFace.msg
+  OpenPoseHumanBodyOnly.msg
+  OpenPoseHumanListBodyAndFace.msg
+  OpenPoseHumanListBodyAndHands.msg
+  OpenPoseHumanListBodyHandsAndFace.msg
+  OpenPoseHumanListBodyOnly.msg
+  PointWithProb.msg
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -81,10 +90,10 @@ set(OPENPOSE_LINK_LIBRARY ${OPENPOSE_DIR}/build/lib/libopenpose.so)
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -116,9 +125,9 @@ set(OPENPOSE_LINK_LIBRARY ${OPENPOSE_DIR}/build/lib/libopenpose.so)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+   INCLUDE_DIRS include
 #  LIBRARIES openpose_ros
-   CATKIN_DEPENDS roscpp rospy
+   CATKIN_DEPENDS roscpp rospy std_msgs message_runtime
 #  DEPENDS system_lib
 )
 
@@ -128,8 +137,8 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-# include_directories( include )
-include_directories(
+include_directories( 
+  include
   ${catkin_INCLUDE_DIRS}
   ${CUDA_INCLUDE_DIRS}
   ${CAFFE_INCLUDE_DIRS}
@@ -149,7 +158,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME}_node src/openpose_ros_node.cpp)
+add_executable(${PROJECT_NAME}_node src/openpose_ros_node.cpp src/gflags_options.cpp src/openpose_ros_io.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

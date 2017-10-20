@@ -29,15 +29,15 @@ Tested on:
    set(CAFFE_DIR /path/to/caffe)
    set(OPENPOSE_DIR /path/to/openpose)
    ```
-5. Modify the model_folder line in src/openpose_ros_node.cpp to where openpose is installed.
+5. Modify the model_folder line in src/gflags_options.cpp to where openpose is installed.
    ```bash
-   DEFINE_string(model_folder,             "/path/to/openpose/models/",      "Folder where the pose models (COCO and MPI) are located.");
+   DEFINE_string(model_folder,             "/path/to/openpose/models/",      "Folder path (absolute or relative) where the models (pose, face, ...) are located.");
    ```
-6. Modify the image_topic line in src/openpose_ros_node.cpp to the image_topic you want to process.
+6. Modify the image_topic line in src/gflags_options.cpp to the image_topic you want to process.
    ```bash
    DEFINE_string(camera_topic,             "/camera/image_raw",      "Image topic that OpenPose will process.");
    ```
-7. Modify the other parameters in src/openpose_ros_node.cpp to your liking such as the net_resolution and resolution of the image or enabling hands and face.
+7. Modify the other parameters in src/gflags_options.cpp to your liking such as enabling face and hands detection.
 8. Run catkin_make from your catkin_workspace directory.
 
 ### Potential Installation Issues

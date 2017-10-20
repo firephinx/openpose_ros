@@ -1,0 +1,4 @@
+PointWithProb[] body_key_points_with_prob
+PointWithProb[] face_key_points_with_prob
+PointWithProb[] right_hand_key_points_with_prob
+PointWithProb[] left_hand_key_points_with_prob

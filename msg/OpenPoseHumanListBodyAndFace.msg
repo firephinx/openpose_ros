@@ -1,0 +1,4 @@
+Header header
+Header rgb_image_header
+int32 num_humans
+OpenPoseHumanBodyAndFace[] human_list
