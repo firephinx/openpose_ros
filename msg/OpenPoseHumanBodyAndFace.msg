@@ -1,2 +1,0 @@
-PointWithProb[] body_key_points_with_prob
-PointWithProb[] face_key_points_with_prob

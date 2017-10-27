@@ -8,14 +8,8 @@
 
 #include <opencv2/core/core.hpp>
 
-#include <openpose_ros/OpenPoseHumanBodyAndFace.h>
-#include <openpose_ros/OpenPoseHumanBodyAndHands.h>
-#include <openpose_ros/OpenPoseHumanBodyHandsAndFace.h>
-#include <openpose_ros/OpenPoseHumanBodyOnly.h>
-#include <openpose_ros/OpenPoseHumanListBodyAndFace.h>
-#include <openpose_ros/OpenPoseHumanListBodyAndHands.h>
-#include <openpose_ros/OpenPoseHumanListBodyHandsAndFace.h>
-#include <openpose_ros/OpenPoseHumanListBodyOnly.h>
+#include <openpose_ros/OpenPoseHuman.h>
+#include <openpose_ros/OpenPoseHumanList.h>
 #include <openpose_ros/PointWithProb.h>
 
 #include <gflags_options.h>

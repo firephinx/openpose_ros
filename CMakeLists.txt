@@ -64,14 +64,8 @@ set(OPENPOSE_LINK_LIBRARY ${OPENPOSE_DIR}/build/lib/libopenpose.so)
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  OpenPoseHumanBodyAndFace.msg
-  OpenPoseHumanBodyAndHands.msg
-  OpenPoseHumanBodyHandsAndFace.msg
-  OpenPoseHumanBodyOnly.msg
-  OpenPoseHumanListBodyAndFace.msg
-  OpenPoseHumanListBodyAndHands.msg
-  OpenPoseHumanListBodyHandsAndFace.msg
-  OpenPoseHumanListBodyOnly.msg
+  OpenPoseHuman.msg
+  OpenPoseHumanList.msg
   PointWithProb.msg
 )
 

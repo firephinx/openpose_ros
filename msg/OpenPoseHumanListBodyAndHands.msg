@@ -1,4 +1,0 @@
-Header header
-Header rgb_image_header
-int32 num_humans
-OpenPoseHumanBodyAndHands[] human_list
