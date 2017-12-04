@@ -99,9 +99,6 @@ int openPoseROS()
     op::log("Starting thread(s)", op::Priority::High);
     opWrapper.start();
 
-    op::log("Starting thread(s)", op::Priority::High);
-    opWrapper.start();
-
     // OpenPose processing
     openpose_ros::OpenPoseROSIO openPoseROSIO(FLAGS_camera_topic, FLAGS_openpose_output_topic);
     bool userWantsToExit = false;
