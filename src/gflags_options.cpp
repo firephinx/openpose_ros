@@ -3,10 +3,14 @@
 // See all the available parameter options withe the `--help` flag. E.g. `build/examples/openpose/openpose.bin --help`
 // Note: This command will show you flags for other unnecessary 3rdparty files. Check only the flags for the OpenPose
 // executable. E.g. for `openpose.bin`, look for `Flags from examples/openpose/openpose.cpp:`.
-// Debugging
+// Debugging/Other
 DEFINE_int32(logging_level,             3,              "The logging level. Integer in the range [0, 255]. 0 will output any log() message, while"
                                                         " 255 will not output any. Current OpenPose library messages are in the range 0-4: 1 for"
                                                         " low priority messages and 4 for important ones.");
+DEFINE_bool(disable_multi_thread,       false,          "It would slightly reduce the frame rate in order to highly reduce the lag. Mainly useful"
+                                                        " for 1) Cases where it is needed a low latency (e.g. webcam in real-time scenarios with"
+                                                        " low-range GPU devices); and 2) Debugging OpenPose when it is crashing to locate the"
+                                                        " error.");
 // Camera Topic
 DEFINE_string(camera_topic,             "/camera/image_raw",      "Image topic that OpenPose will process.");
 // Output Topic
@@ -29,7 +33,7 @@ DEFINE_bool(body_disable,               false,          "Disable body keypoint d
                                                         " keypoint detection.");
 DEFINE_string(model_pose,               "COCO",         "Model to be used. E.g. `COCO` (18 keypoints), `MPI` (15 keypoints, ~10% faster), "
                                                         "`MPI_4_layers` (15 keypoints, even faster but less accurate).");
-DEFINE_string(net_resolution,           "656x368",      "Multiples of 16. If it is increased, the accuracy potentially increases. If it is"
+DEFINE_string(net_resolution,           "-1x368",       "Multiples of 16. If it is increased, the accuracy potentially increases. If it is"
                                                         " decreased, the speed increases. For maximum speed-accuracy balance, it should keep the"
                                                         " closest aspect ratio possible to the images or videos to be processed. Using `-1` in"
                                                         " any of the dimensions, OP will choose the optimal aspect ratio depending on the user's"
@@ -39,6 +43,7 @@ DEFINE_int32(scale_number,              1,              "Number of scales to ave
 DEFINE_double(scale_gap,                0.3,            "Scale gap between scales. No effect unless scale_number > 1. Initial scale is always 1."
                                                         " If you want to change the initial scale, you actually want to multiply the"
                                                         " `net_resolution` by your desired initial scale.");
+// OpenPose Body Pose Heatmaps
 DEFINE_bool(heatmaps_add_parts,         false,          "If true, it will add the body part heatmaps to the final op::Datum::poseHeatMaps array,"
                                                         " and analogously face & hand heatmaps to op::Datum::faceHeatMaps & op::Datum::handHeatMaps"
                                                         " (program speed will decrease). Not required for our library, enable it only if you intend"
@@ -48,7 +53,7 @@ DEFINE_bool(heatmaps_add_parts,         false,          "If true, it will add th
 DEFINE_bool(heatmaps_add_bkg,           false,          "Same functionality as `add_heatmaps_parts`, but adding the heatmap corresponding to"
                                                         " background.");
 DEFINE_bool(heatmaps_add_PAFs,          false,          "Same functionality as `add_heatmaps_parts`, but adding the PAFs.");
-DEFINE_int32(heatmaps_scale,            2,              "Set 0 to scale op::Datum::poseHeatMaps in the range [0,1], 1 for [-1,1]; and 2 for integer"
+DEFINE_int32(heatmaps_scale,            2,              "Set 0 to scale op::Datum::poseHeatMaps in the range [-1,1], 1 for [0,1]; and 2 for integer"
                                                         " rounded [0,255].");
 // OpenPose Face
 DEFINE_bool(face,                       false,          "Enables face keypoint detection. It will share some parameters from the body pose, e.g."
@@ -119,4 +124,5 @@ DEFINE_string(write_coco_json,          "",             "Full file path to write
 DEFINE_string(write_heatmaps,           "",             "Directory to write body pose heatmaps in *.png format. At least 1 `add_heatmaps_X` flag"
                                                         " must be enabled.");
 DEFINE_string(write_heatmaps_format,    "png",          "File extension and format for `write_heatmaps`, analogous to `write_images_format`."
-                                                        " Recommended `png` or any compressed and lossless format.");
+                                                        " For lossless compression, recommended `png` for integer `heatmaps_scale` and `float` for"
+                                                        " floating values.");

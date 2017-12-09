@@ -9,6 +9,7 @@
 #endif
 
 DECLARE_int32(logging_level);
+DECLARE_bool(disable_multi_thread);
 // Camera Topic
 DECLARE_string(camera_topic);
 // Output Topic
@@ -25,6 +26,7 @@ DECLARE_string(model_pose);
 DECLARE_string(net_resolution);
 DECLARE_int32(scale_number);
 DECLARE_double(scale_gap);
+// OpenPose Body Pose Heatmaps
 DECLARE_bool(heatmaps_add_parts);
 DECLARE_bool(heatmaps_add_bkg);
 DECLARE_bool(heatmaps_add_PAFs);

@@ -26,6 +26,7 @@
 
 int openPoseROS()
 {
+
     // logging_level
     op::check(0 <= FLAGS_logging_level && FLAGS_logging_level <= 255, "Wrong logging_level value.",
               __LINE__, __FUNCTION__, __FILE__);
@@ -51,10 +52,7 @@ int openPoseROS()
     // heatmaps to add
     const auto heatMapTypes = op::flagsToHeatMaps(FLAGS_heatmaps_add_parts, FLAGS_heatmaps_add_bkg,
                                                   FLAGS_heatmaps_add_PAFs);
-    op::check(FLAGS_heatmaps_scale >= 0 && FLAGS_heatmaps_scale <= 2, "Non valid `heatmaps_scale`.",
-              __LINE__, __FUNCTION__, __FILE__);
-    const auto heatMapScale = (FLAGS_heatmaps_scale == 0 ? op::ScaleMode::PlusMinusOne
-                              : (FLAGS_heatmaps_scale == 1 ? op::ScaleMode::ZeroToOne : op::ScaleMode::UnsignedChar ));
+    const auto heatMapScale = op::flagsToHeatMapScaleMode(FLAGS_heatmaps_scale);
     // Enabling Google Logging
     const bool enableGoogleLogging = true;
     // Logging
@@ -93,11 +91,9 @@ int openPoseROS()
     op::log("Configuring OpenPose wrapper.", op::Priority::Low, __LINE__, __FUNCTION__, __FILE__);
     opWrapper.configure(wrapperStructPose, wrapperStructFace, wrapperStructHand, op::WrapperStructInput{},
                         wrapperStructOutput);
-    // Set to single-thread running (e.g. for debugging purposes)
-    // opWrapper.disableMultiThreading();
-
-    op::log("Starting thread(s)", op::Priority::High);
-    opWrapper.start();
+    // Set to single-thread running (to debug and/or reduce latency)
+    if (FLAGS_disable_multi_thread)
+       opWrapper.disableMultiThreading();
 
     op::log("Starting thread(s)", op::Priority::High);
     opWrapper.start();
