@@ -11,6 +11,8 @@ DEFINE_bool(disable_multi_thread,       false,          "It would slightly reduc
                                                         " for 1) Cases where it is needed a low latency (e.g. webcam in real-time scenarios with"
                                                         " low-range GPU devices); and 2) Debugging OpenPose when it is crashing to locate the"
                                                         " error.");
+DEFINE_int32(profile_speed,             1000,           "If PROFILER_ENABLED was set in CMake or Makefile.config files, OpenPose will show some"
+                                                        " runtime statistics at this frame number.");
 // Camera Topic
 DEFINE_string(camera_topic,             "/camera/image_raw",      "Image topic that OpenPose will process.");
 // Output Topic
@@ -43,18 +45,26 @@ DEFINE_int32(scale_number,              1,              "Number of scales to ave
 DEFINE_double(scale_gap,                0.3,            "Scale gap between scales. No effect unless scale_number > 1. Initial scale is always 1."
                                                         " If you want to change the initial scale, you actually want to multiply the"
                                                         " `net_resolution` by your desired initial scale.");
-// OpenPose Body Pose Heatmaps
-DEFINE_bool(heatmaps_add_parts,         false,          "If true, it will add the body part heatmaps to the final op::Datum::poseHeatMaps array,"
-                                                        " and analogously face & hand heatmaps to op::Datum::faceHeatMaps & op::Datum::handHeatMaps"
-                                                        " (program speed will decrease). Not required for our library, enable it only if you intend"
-                                                        " to process this information later. If more than one `add_heatmaps_X` flag is enabled, it"
-                                                        " will place then in sequential memory order: body parts + bkg + PAFs. It will follow the"
-                                                        " order on POSE_BODY_PART_MAPPING in `include/openpose/pose/poseParameters.hpp`.");
+// OpenPose Body Pose Heatmaps and Part Candidates
+DEFINE_bool(heatmaps_add_parts,         false,          "If true, it will fill op::Datum::poseHeatMaps array with the body part heatmaps, and"
+                                                        " analogously face & hand heatmaps to op::Datum::faceHeatMaps & op::Datum::handHeatMaps."
+                                                        " If more than one `add_heatmaps_X` flag is enabled, it will place then in sequential"
+                                                        " memory order: body parts + bkg + PAFs. It will follow the order on"
+                                                        " POSE_BODY_PART_MAPPING in `src/openpose/pose/poseParameters.cpp`. Program speed will"
+                                                        " considerably decrease. Not required for OpenPose, enable it only if you intend to"
+                                                        " explicitly use this information later.");
 DEFINE_bool(heatmaps_add_bkg,           false,          "Same functionality as `add_heatmaps_parts`, but adding the heatmap corresponding to"
                                                         " background.");
 DEFINE_bool(heatmaps_add_PAFs,          false,          "Same functionality as `add_heatmaps_parts`, but adding the PAFs.");
-DEFINE_int32(heatmaps_scale,            2,              "Set 0 to scale op::Datum::poseHeatMaps in the range [-1,1], 1 for [0,1]; and 2 for integer"
-                                                        " rounded [0,255].");
+DEFINE_int32(heatmaps_scale,            2,              "Set 0 to scale op::Datum::poseHeatMaps in the range [-1,1], 1 for [0,1]; 2 for integer"
+                                                        " rounded [0,255]; and 3 for no scaling.");
+DEFINE_bool(part_candidates,            false,          "Also enable `write_json` in order to save this information. If true, it will fill the"
+                                                        " op::Datum::poseCandidates array with the body part candidates. Candidates refer to all"
+                                                        " the detected body parts, before being assembled into people. Note that the number of"
+                                                        " candidates is equal or higher than the number of final body parts (i.e. after being"
+                                                        " assembled into people). The empty body parts are filled with 0s. Program speed will"
+                                                        " slightly decrease. Not required for OpenPose, enable it only if you intend to explicitly"
+                                                        " use this information.");
 // OpenPose Face
 DEFINE_bool(face,                       false,          "Enables face keypoint detection. It will share some parameters from the body pose, e.g."
                                                         " `model_folder`. Note that this will considerable slow down the performance and increse"
@@ -90,10 +100,11 @@ DEFINE_double(render_threshold,         0.05,           "Only estimated keypoint
                                                         " rendered. Generally, a high threshold (> 0.5) will only render very clear body parts;"
                                                         " while small thresholds (~0.1) will also output guessed and occluded keypoints, but also"
                                                         " more false positives (i.e. wrong detections).");
-DEFINE_int32(render_pose,               2,              "Set to 0 for no rendering, 1 for CPU rendering (slightly faster), and 2 for GPU rendering"
-                                                        " (slower but greater functionality, e.g. `alpha_X` flags). If rendering is enabled, it will"
-                                                        " render both `outputData` and `cvOutputData` with the original image and desired body part"
-                                                        " to be shown (i.e. keypoints, heat maps or PAFs).");
+DEFINE_int32(render_pose,               -1,             "Set to 0 for no rendering, 1 for CPU rendering (slightly faster), and 2 for GPU rendering"
+                                                        " (slower but greater functionality, e.g. `alpha_X` flags). If -1, it will pick CPU if"
+                                                        " CPU_ONLY is enabled, or GPU if CUDA is enabled. If rendering is enabled, it will render"
+                                                        " both `outputData` and `cvOutputData` with the original image and desired body part to be"
+                                                        " shown (i.e. keypoints, heat maps or PAFs).");
 DEFINE_double(alpha_pose,               0.6,            "Blending factor (range 0-1) for the body part rendering. 1 will show it completely, 0 will"
                                                         " hide it. Only valid for GPU rendering.");
 DEFINE_double(alpha_heatmap,            0.7,            "Blending factor (range 0-1) between heatmap and original frame. 1 will only show the"
@@ -116,13 +127,17 @@ DEFINE_string(write_images_format,      "png",          "File extension and form
                                                         " function cv::imwrite for all compatible extensions.");
 DEFINE_string(write_video,              "",             "Full file path to write rendered frames in motion JPEG video format. It might fail if the"
                                                         " final path does not finish in `.avi`. It internally uses cv::VideoWriter.");
-DEFINE_string(write_keypoint,           "",             "Directory to write the people body pose keypoint data. Set format with `write_keypoint_format`.");
-DEFINE_string(write_keypoint_format,    "yml",          "File extension and format for `write_keypoint`: json, xml, yaml & yml. Json not available"
-                                                        " for OpenCV < 3.0, use `write_keypoint_json` instead.");
-DEFINE_string(write_keypoint_json,      "",             "Directory to write people pose data in *.json format, compatible with any OpenCV version.");
-DEFINE_string(write_coco_json,          "",             "Full file path to write people pose data with *.json COCO validation format.");
-DEFINE_string(write_heatmaps,           "",             "Directory to write body pose heatmaps in *.png format. At least 1 `add_heatmaps_X` flag"
+DEFINE_string(write_json,               "",             "Directory to write OpenPose output in JSON format. It includes body, hand, and face pose"
+                                                        " keypoints, as well as pose candidates (if `--part_candidates` enabled).");
+DEFINE_string(write_coco_json,          "",             "Full file path to write people pose data with JSON COCO validation format.");
+DEFINE_string(write_heatmaps,           "",             "Directory to write body pose heatmaps in PNG format. At least 1 `add_heatmaps_X` flag"
                                                         " must be enabled.");
 DEFINE_string(write_heatmaps_format,    "png",          "File extension and format for `write_heatmaps`, analogous to `write_images_format`."
                                                         " For lossless compression, recommended `png` for integer `heatmaps_scale` and `float` for"
                                                         " floating values.");
+DEFINE_string(write_keypoint,           "",             "(Deprecated, use `write_json`) Directory to write the people pose keypoint data. Set format"
+                                                        " with `write_keypoint_format`.");
+DEFINE_string(write_keypoint_format,    "yml",          "(Deprecated, use `write_json`) File extension and format for `write_keypoint`: json, xml,"
+                                                        " yaml & yml. Json not available for OpenCV < 3.0, use `write_keypoint_json` instead.");
+DEFINE_string(write_keypoint_json,      "",             "(Deprecated, use `write_json`) Directory to write people pose data in JSON format,"
+                                                        " compatible with any OpenCV version.");

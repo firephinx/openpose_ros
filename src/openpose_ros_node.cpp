@@ -31,7 +31,7 @@ int openPoseROS()
     op::check(0 <= FLAGS_logging_level && FLAGS_logging_level <= 255, "Wrong logging_level value.",
               __LINE__, __FUNCTION__, __FILE__);
     op::ConfigureLog::setPriorityThreshold((op::Priority)FLAGS_logging_level);
-    // op::ConfigureLog::setPriorityThreshold(op::Priority::None); // To print all logging messages
+    op::Profiler::setDefaultX(FLAGS_profile_speed);
 
     op::log("Starting pose estimation demo.", op::Priority::High);
     const auto timerBegin = std::chrono::high_resolution_clock::now();
@@ -47,6 +47,11 @@ int openPoseROS()
     const auto handNetInputSize = op::flagsToPoint(FLAGS_hand_net_resolution, "368x368 (multiples of 16)");
     // poseModel
     const auto poseModel = op::flagsToPoseModel(FLAGS_model_pose);
+    // JSON saving
+    const auto writeJson = (!FLAGS_write_json.empty() ? FLAGS_write_json : FLAGS_write_keypoint_json);
+    if (!FLAGS_write_keypoint.empty() || !FLAGS_write_keypoint_json.empty())
+        op::log("Flags `write_keypoint` and `write_keypoint_json` are deprecated and will eventually be removed."
+                " Please, use `write_json` instead.", op::Priority::Max);
     // keypointScale
     const auto keypointScale = op::flagsToScaleMode(FLAGS_keypoint_scale);
     // heatmaps to add
@@ -66,8 +71,8 @@ int openPoseROS()
                                                   (float)FLAGS_scale_gap, op::flagsToRenderMode(FLAGS_render_pose),
                                                   poseModel, !FLAGS_disable_blending, (float)FLAGS_alpha_pose,
                                                   (float)FLAGS_alpha_heatmap, FLAGS_part_to_show, FLAGS_model_folder,
-                                                  heatMapTypes, heatMapScale, (float)FLAGS_render_threshold,
-                                                  enableGoogleLogging};
+                                                  heatMapTypes, heatMapScale, FLAGS_part_candidates,
+                                                  (float)FLAGS_render_threshold, enableGoogleLogging};
     // Face configuration (use op::WrapperStructFace{} to disable it)
     const op::WrapperStructFace wrapperStructFace{FLAGS_face, faceNetInputSize,
                                                   op::flagsToRenderMode(FLAGS_face_render, FLAGS_render_pose),
@@ -84,8 +89,9 @@ int openPoseROS()
     const bool guiVerbose = false;
     const bool fullScreen = false;
     const op::WrapperStructOutput wrapperStructOutput{displayGui, guiVerbose, fullScreen, FLAGS_write_keypoint,
-                                                      op::stringToDataFormat(FLAGS_write_keypoint_format), FLAGS_write_keypoint_json,
-                                                      FLAGS_write_coco_json, FLAGS_write_images, FLAGS_write_images_format, FLAGS_write_video,
+                                                      op::stringToDataFormat(FLAGS_write_keypoint_format),
+                                                      writeJson, FLAGS_write_coco_json,
+                                                      FLAGS_write_images, FLAGS_write_images_format, FLAGS_write_video,
                                                       FLAGS_write_heatmaps, FLAGS_write_heatmaps_format};
     // Configure wrapper
     op::log("Configuring OpenPose wrapper.", op::Priority::Low, __LINE__, __FUNCTION__, __FILE__);

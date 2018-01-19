@@ -10,6 +10,7 @@
 
 DECLARE_int32(logging_level);
 DECLARE_bool(disable_multi_thread);
+DECLARE_int32(profile_speed);
 // Camera Topic
 DECLARE_string(camera_topic);
 // Output Topic
@@ -26,11 +27,12 @@ DECLARE_string(model_pose);
 DECLARE_string(net_resolution);
 DECLARE_int32(scale_number);
 DECLARE_double(scale_gap);
-// OpenPose Body Pose Heatmaps
+// OpenPose Body Pose Heatmaps and Part Candidates
 DECLARE_bool(heatmaps_add_parts);
 DECLARE_bool(heatmaps_add_bkg);
 DECLARE_bool(heatmaps_add_PAFs);
 DECLARE_int32(heatmaps_scale);
+DECLARE_bool(part_candidates);
 // OpenPose Face
 DECLARE_bool(face);
 DECLARE_string(face_net_resolution);
@@ -62,11 +64,12 @@ DECLARE_double(hand_alpha_heatmap);
 DECLARE_string(write_images);
 DECLARE_string(write_images_format);
 DECLARE_string(write_video);
-DECLARE_string(write_keypoint);
-DECLARE_string(write_keypoint_format);
-DECLARE_string(write_keypoint_json);
+DECLARE_string(write_json);
 DECLARE_string(write_coco_json);
 DECLARE_string(write_heatmaps);
 DECLARE_string(write_heatmaps_format);
+DECLARE_string(write_keypoint);
+DECLARE_string(write_keypoint_format);
+DECLARE_string(write_keypoint_json);
 
 #endif
