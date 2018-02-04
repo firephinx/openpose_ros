@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 2.8.7)
 project(openpose_ros)
 
 ## Add support for C++11, supported in ROS Kinetic and newer
@@ -15,22 +15,17 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   cv_bridge
   image_transport
-  gflags
 )
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 # find_package(CUDA REQUIRED) # Uncomment this line if you have trouble compiling
 find_package(OpenCV REQUIRED)
-
-set(CAFFE_DIR /path/to/caffe)
-set(OPENPOSE_DIR /path/to/openpose)
-
-set(CAFFE_INCLUDE_DIRS ${CAFFE_DIR}/distribute/include)
-set(CAFFE_LINK_LIBRARY ${CAFFE_DIR}/distribute/lib/libcaffe.so)
-
-set(OPENPOSE_INCLUDE_DIRS ${OPENPOSE_DIR}/include)
-set(OPENPOSE_LINK_LIBRARY ${OPENPOSE_DIR}/build/lib/libopenpose.so)
+find_package(GFlags)
+find_package(Glog)
+find_package(OpenPose REQUIRED)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -136,7 +131,10 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${CUDA_INCLUDE_DIRS}
   ${CAFFE_INCLUDE_DIRS}
-  ${OPENPOSE_INCLUDE_DIRS}
+  ${OpenPose_INCLUDE_DIRS} 
+  ${GFLAGS_INCLUDE_DIR} 
+  ${GLOG_INCLUDE_DIR} 
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -168,8 +166,9 @@ add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
-  ${CAFFE_LINK_LIBRARY}
-  ${OPENPOSE_LINK_LIBRARY}
+  ${OpenPose_LIBS} 
+  ${GFLAGS_LIBRARY} 
+  ${GLOG_LIBRARY} 
 )
 
 #############

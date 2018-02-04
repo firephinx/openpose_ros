@@ -1,5 +1,3 @@
-#define USE_CAFFE
-
 // ------------------------- OpenPose Library Tutorial - Wrapper - Example 1 - Asynchronous -------------------------
 // Asynchronous mode: ideal for fast prototyping when performance is not an issue. The user emplaces/pushes and pops frames from the OpenPose wrapper
 // when he desires to.
