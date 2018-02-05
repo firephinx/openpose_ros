@@ -1,3 +1,8 @@
+int32 num_body_key_points_with_non_zero_prob
+int32 num_face_key_points_with_non_zero_prob
+int32 num_right_hand_key_points_with_non_zero_prob
+int32 num_left_hand_key_points_with_non_zero_prob
+BoundingBox face_bounding_box
 PointWithProb[] body_key_points_with_prob
 PointWithProb[] face_key_points_with_prob
 PointWithProb[] right_hand_key_points_with_prob

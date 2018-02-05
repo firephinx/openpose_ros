@@ -8,6 +8,7 @@
 
 #include <opencv2/core/core.hpp>
 
+#include <openpose_ros/BoundingBox.h>
 #include <openpose_ros/OpenPoseHuman.h>
 #include <openpose_ros/OpenPoseHumanList.h>
 #include <openpose_ros/PointWithProb.h>
