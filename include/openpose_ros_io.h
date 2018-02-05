@@ -5,6 +5,7 @@
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
+#include <std_msgs/Header.h>
 
 #include <opencv2/core/core.hpp>
 
@@ -28,6 +29,7 @@ namespace openpose_ros {
             image_transport::ImageTransport it_;
             image_transport::Subscriber image_sub_;
             cv_bridge::CvImagePtr cv_img_ptr_;
+            std_msgs::Header rgb_image_header_;
 
         public:
             OpenPoseROSIO(const std::string& image_topic, const std::string& openpose_output_topic);
