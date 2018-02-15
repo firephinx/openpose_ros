@@ -21,6 +21,7 @@ DECLARE_string(output_resolution);
 DECLARE_int32(num_gpu);
 DECLARE_int32(num_gpu_start);
 DECLARE_int32(keypoint_scale);
+DECLARE_int32(number_people_max);
 // OpenPose Body Pose
 DECLARE_bool(body_disable);
 DECLARE_string(model_pose);
@@ -42,6 +43,8 @@ DECLARE_string(hand_net_resolution);
 DECLARE_int32(hand_scale_number);
 DECLARE_double(hand_scale_range);
 DECLARE_bool(hand_tracking);
+// OpenPose 3-D Reconstruction
+DECLARE_bool(3d);
 // OpenPose Rendering
 DECLARE_int32(part_to_show);
 DECLARE_bool(disable_blending);
