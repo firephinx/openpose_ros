@@ -8,8 +8,8 @@ OpenPoseROSIO::OpenPoseROSIO(): it_(nh_)
     std::string image_topic;
     std::string output_topic;
 
-    nh_.param("image_topic", image_topic, "/camera/image_raw");
-    nh_.param("output_topic", output_topic, "/openpose_ros/human_list");
+    nh_.param("image_topic", image_topic, std::string("/camera/image_raw"));
+    nh_.param("output_topic", output_topic, std::string("/openpose_ros/human_list"));
 
     image_sub_ = it_.subscribe(image_topic, 1, &OpenPoseROSIO::convertImage, this);
     openpose_human_list_pub_ = nh_.advertise<openpose_ros::OpenPoseHumanList>(output_topic, 10);

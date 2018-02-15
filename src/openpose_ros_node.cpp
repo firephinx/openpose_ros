@@ -103,7 +103,7 @@ int openPoseROS()
     opWrapper.start();
 
     // OpenPose processing
-    openpose_ros::OpenPoseROSIO openPoseROSIO();
+    openpose_ros::OpenPoseROSIO openPoseROSIO;
     bool userWantsToExit = false;
     while (!userWantsToExit && ros::ok())
     {
