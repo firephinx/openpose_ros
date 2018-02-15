@@ -32,7 +32,7 @@ namespace openpose_ros {
             std_msgs::Header rgb_image_header_;
 
         public:
-            OpenPoseROSIO(const std::string& image_topic, const std::string& openpose_output_topic);
+            OpenPoseROSIO();
 
             ~OpenPoseROSIO(){}
 

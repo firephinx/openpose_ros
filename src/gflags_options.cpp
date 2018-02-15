@@ -13,10 +13,6 @@ DEFINE_bool(disable_multi_thread,       false,          "It would slightly reduc
                                                         " error.");
 DEFINE_int32(profile_speed,             1000,           "If PROFILER_ENABLED was set in CMake or Makefile.config files, OpenPose will show some"
                                                         " runtime statistics at this frame number.");
-// Camera Topic
-DEFINE_string(camera_topic,             "/camera/image_raw",      "Image topic that OpenPose will process.");
-// Output Topic
-DEFINE_string(openpose_output_topic,    "/openpose_ros/human_list",      "Output topic where OpenPose will publish the human list.");
 // OpenPose
 DEFINE_string(model_folder,             "/path/to/openpose/models/",      "Folder path (absolute or relative) where the models (pose, face, ...) are located.");
 DEFINE_string(output_resolution,        "-1x-1",        "The image resolution (display and output). Use \"-1x-1\" to force the program to use the"

@@ -2,11 +2,17 @@
 
 using namespace openpose_ros;
 
-OpenPoseROSIO::OpenPoseROSIO(const std::string& image_topic, const std::string& openpose_output_topic): it_(nh_)
+OpenPoseROSIO::OpenPoseROSIO(): it_(nh_)
 {
     // Subscribe to input video feed and publish human lists as output
+    std::string image_topic;
+    std::string output_topic;
+
+    nh_.param("image_topic", image_topic, "/camera/image_raw");
+    nh_.param("output_topic", output_topic, "/openpose_ros/human_list");
+
     image_sub_ = it_.subscribe(image_topic, 1, &OpenPoseROSIO::convertImage, this);
-    openpose_human_list_pub_ = nh_.advertise<openpose_ros::OpenPoseHumanList>(openpose_output_topic, 10);
+    openpose_human_list_pub_ = nh_.advertise<openpose_ros::OpenPoseHumanList>(output_topic, 10);
     cv_img_ptr_ = nullptr;
 }
 

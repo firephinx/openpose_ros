@@ -11,10 +11,6 @@
 DECLARE_int32(logging_level);
 DECLARE_bool(disable_multi_thread);
 DECLARE_int32(profile_speed);
-// Camera Topic
-DECLARE_string(camera_topic);
-// Output Topic
-DECLARE_string(openpose_output_topic);
 // OpenPose
 DECLARE_string(model_folder);
 DECLARE_string(output_resolution);
