@@ -2,7 +2,7 @@
 
 using namespace openpose_ros;
 
-OpenPoseROSIO::OpenPoseROSIO(): it_(nh_)
+OpenPoseROSIO::OpenPoseROSIO(OpenPose &openPose): it_(nh_)
 {
     // Subscribe to input video feed and publish human lists as output
     std::string image_topic;
@@ -13,9 +13,32 @@ OpenPoseROSIO::OpenPoseROSIO(): it_(nh_)
 
     std::cout << image_topic << std::endl;
 
-    image_sub_ = it_.subscribe(image_topic, 1, &OpenPoseROSIO::convertImage, this);
+    image_sub_ = it_.subscribe(image_topic, 1, &OpenPoseROSIO::processImage, this);
     openpose_human_list_pub_ = nh_.advertise<openpose_ros_msgs::OpenPoseHumanList>(output_topic, 10);
     cv_img_ptr_ = nullptr;
+    openpose_ = openPose;
+}
+
+void OpenPoseROSIO::processImage(const sensor_msgs::ImageConstPtr& msg)
+{
+    convertImage(msg);
+    std::shared_ptr<std::vector<op::Datum>> datumToProcess = createDatum();
+
+    bool successfullyEmplaced = openpose_.waitAndEmplace(datumToProcess);
+    
+    // Pop frame
+    std::shared_ptr<std::vector<op::Datum>> datumProcessed;
+    if (successfullyEmplaced && openpose_.waitAndPop(datumProcessed))
+    {
+        openPoseROSIO.display(datumProcessed);
+        openPoseROSIO.printKeypoints(datumProcessed);
+        openPoseROSIO.publish(datumProcessed);
+    }
+    else
+    {
+        op::log("Processed datum could not be emplaced.", op::Priority::High,
+                __LINE__, __FUNCTION__, __FILE__);
+    }
 }
 
 void OpenPoseROSIO::convertImage(const sensor_msgs::ImageConstPtr& msg)
@@ -24,7 +47,6 @@ void OpenPoseROSIO::convertImage(const sensor_msgs::ImageConstPtr& msg)
     {
         cv_img_ptr_ = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
         rgb_image_header_ = msg->header;
-        ROS_ERROR("RECEIVED IMAGE");
     }
     catch (cv_bridge::Exception& e)
     {

@@ -31,10 +31,14 @@ namespace openpose_ros {
             cv_bridge::CvImagePtr cv_img_ptr_;
             std_msgs::Header rgb_image_header_;
 
+            OpenPose openpose_;
+
         public:
-            OpenPoseROSIO();
+            OpenPoseROSIO(OpenPose &openPose);
 
             ~OpenPoseROSIO(){}
+
+            void processImage(const sensor_msgs::ImageConstPtr& msg);
 
             void convertImage(const sensor_msgs::ImageConstPtr& msg);
 
