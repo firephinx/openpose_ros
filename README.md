@@ -20,15 +20,15 @@ Tested on:
    ```bash
    git clone https://github.com/firephinx/openpose_ros.git
    ```
-3. Modify the model_folder line in src/gflags_options.cpp to where openpose is installed.
+3. Modify the model_folder line in openpose_ros/src/gflags_options.cpp to where openpose is installed.
    ```bash
    DEFINE_string(model_folder,             "/path/to/openpose/models/",      "Folder path (absolute or relative) where the models (pose, face, ...) are located.");
    ```
-4. Modify the image_topic parameter in launch/openpose_ros.launch to the image_topic you want to process.
+4. Modify the image_topic parameter in openpose_ros/launch/openpose_ros.launch to the image_topic you want to process.
    ```bash
    <param name="image_topic"     value="/camera/image_raw" />
    ```
-5. Modify the other parameters in src/gflags_options.cpp and launch/openpose_ros.launch to your liking such as enabling face and hands detection.
+5. Modify the other parameters in openpose_ros/src/gflags_options.cpp and openpose_ros/launch/openpose_ros.launch to your liking such as enabling face and hands detection.
 6. Run catkin_make from your catkin_workspace directory.
 
 ### Potential Installation Issues

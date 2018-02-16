@@ -9,10 +9,10 @@
 
 #include <opencv2/core/core.hpp>
 
-#include <openpose_ros/BoundingBox.h>
-#include <openpose_ros/OpenPoseHuman.h>
-#include <openpose_ros/OpenPoseHumanList.h>
-#include <openpose_ros/PointWithProb.h>
+#include <openpose_ros_msgs/BoundingBox.h>
+#include <openpose_ros_msgs/OpenPoseHuman.h>
+#include <openpose_ros_msgs/OpenPoseHumanList.h>
+#include <openpose_ros_msgs/PointWithProb.h>
 
 #include <gflags_options.h>
 
