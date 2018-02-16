@@ -64,22 +64,22 @@ OpenPose::OpenPose() : outputSize(op::flagsToPoint(FLAGS_output_resolution, "-1x
 
 }
 
-OpenPose::start()
+void OpenPose::start()
 {
     opWrapper.start();
 }
 
-OpenPose::waitAndEmplace(std::shared_ptr<std::vector<op::Datum>> &datumToProcess)
+bool OpenPose::waitAndEmplace(std::shared_ptr<std::vector<op::Datum>> &datumToProcess)
 {
     opWrapper.waitAndEmplace(datumToProcess);
 }
 
-OpenPose::waitAndPop(std::shared_ptr<std::vector<op::Datum>> &datumProcessed)
+bool OpenPose::waitAndPop(std::shared_ptr<std::vector<op::Datum>> &datumProcessed)
 {
-    opWrapper.waitAndPop(datumProcessed)
+    opWrapper.waitAndPop(datumProcessed);
 }
 
-OpenPose::stop()
+void OpenPose::stop()
 {
     opWrapper.stop();
 }

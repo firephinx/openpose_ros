@@ -32,7 +32,7 @@ namespace openpose_ros {
             const bool guiVerbose;
             const bool fullScreen;
 
-            const op::WrapperStructOutput wrapperStructOutput
+            const op::WrapperStructOutput wrapperStructOutput;
 
         public:
             OpenPose();

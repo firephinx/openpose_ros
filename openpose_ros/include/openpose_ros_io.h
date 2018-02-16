@@ -14,6 +14,7 @@
 #include <openpose_ros_msgs/OpenPoseHumanList.h>
 #include <openpose_ros_msgs/PointWithProb.h>
 
+#include <openpose.h>
 #include <gflags_options.h>
 
 // OpenPose dependencies
@@ -31,7 +32,7 @@ namespace openpose_ros {
             cv_bridge::CvImagePtr cv_img_ptr_;
             std_msgs::Header rgb_image_header_;
 
-            OpenPose openpose_;
+            OpenPose* openpose_;
 
         public:
             OpenPoseROSIO(OpenPose &openPose);

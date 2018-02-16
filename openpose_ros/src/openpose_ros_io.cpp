@@ -16,7 +16,7 @@ OpenPoseROSIO::OpenPoseROSIO(OpenPose &openPose): it_(nh_)
     image_sub_ = it_.subscribe(image_topic, 1, &OpenPoseROSIO::processImage, this);
     openpose_human_list_pub_ = nh_.advertise<openpose_ros_msgs::OpenPoseHumanList>(output_topic, 10);
     cv_img_ptr_ = nullptr;
-    openpose_ = openPose;
+    openpose_ = &openPose;
 }
 
 void OpenPoseROSIO::processImage(const sensor_msgs::ImageConstPtr& msg)
@@ -24,15 +24,15 @@ void OpenPoseROSIO::processImage(const sensor_msgs::ImageConstPtr& msg)
     convertImage(msg);
     std::shared_ptr<std::vector<op::Datum>> datumToProcess = createDatum();
 
-    bool successfullyEmplaced = openpose_.waitAndEmplace(datumToProcess);
+    bool successfullyEmplaced = openpose_->waitAndEmplace(datumToProcess);
     
     // Pop frame
     std::shared_ptr<std::vector<op::Datum>> datumProcessed;
-    if (successfullyEmplaced && openpose_.waitAndPop(datumProcessed))
+    if (successfullyEmplaced && openpose_->waitAndPop(datumProcessed))
     {
-        openPoseROSIO.display(datumProcessed);
-        openPoseROSIO.printKeypoints(datumProcessed);
-        openPoseROSIO.publish(datumProcessed);
+        display(datumProcessed);
+        printKeypoints(datumProcessed);
+        publish(datumProcessed);
     }
     else
     {
