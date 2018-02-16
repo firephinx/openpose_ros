@@ -11,8 +11,6 @@ OpenPoseROSIO::OpenPoseROSIO(OpenPose &openPose): it_(nh_)
     nh_.param("/openpose_ros_node/image_topic", image_topic, std::string("/camera/image_raw"));
     nh_.param("/openpose_ros_node/output_topic", output_topic, std::string("/openpose_ros/human_list"));
 
-    std::cout << image_topic << std::endl;
-
     image_sub_ = it_.subscribe(image_topic, 1, &OpenPoseROSIO::processImage, this);
     openpose_human_list_pub_ = nh_.advertise<openpose_ros_msgs::OpenPoseHumanList>(output_topic, 10);
     cv_img_ptr_ = nullptr;
