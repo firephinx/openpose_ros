@@ -170,8 +170,6 @@ void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<op::Datum>>& datum
             openpose_ros_msgs::OpenPoseHuman human;
 
             int num_body_key_points_with_non_zero_prob = 0;
-            std::vector<openpose_ros_msgs::PointWithProb> body_key_points_with_prob(poseKeypoints.getSize(1));
-
             for (auto bodyPart = 0 ; bodyPart < poseKeypoints.getSize(1) ; bodyPart++)
             {
                 openpose_ros_msgs::PointWithProb body_point_with_prob;
@@ -182,15 +180,13 @@ void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<op::Datum>>& datum
                 {
                     num_body_key_points_with_non_zero_prob++;
                 }
-                body_key_points_with_prob.at(bodyPart) = body_point_with_prob;
+                human.body_key_points_with_prob.at(bodyPart) = body_point_with_prob;
             }
             human.num_body_key_points_with_non_zero_prob = num_body_key_points_with_non_zero_prob;
-            human.body_key_points_with_prob = body_key_points_with_prob;
 
             if(FLAGS_face)
             {
                 int num_face_key_points_with_non_zero_prob = 0;
-                std::vector<openpose_ros_msgs::PointWithProb> face_key_points_with_prob(faceKeypoints.getSize(1));
 
                 for (auto facePart = 0 ; facePart < faceKeypoints.getSize(1) ; facePart++)
                 {
@@ -202,10 +198,9 @@ void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<op::Datum>>& datum
                     {
                         num_face_key_points_with_non_zero_prob++;
                     }
-                    face_key_points_with_prob.at(facePart) = face_point_with_prob;
+                    human.face_key_points_with_prob.at(facePart) = face_point_with_prob;
                 }  
                 human.num_face_key_points_with_non_zero_prob = num_face_key_points_with_non_zero_prob;
-                human.face_key_points_with_prob = face_key_points_with_prob;
 
                 openpose_ros_msgs::BoundingBox face_bounding_box;
                 face_bounding_box.x = face_rectangles.at(person).x;
@@ -220,8 +215,6 @@ void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<op::Datum>>& datum
 
                 int num_right_hand_key_points_with_non_zero_prob = 0;
                 int num_left_hand_key_points_with_non_zero_prob = 0;
-                std::vector<openpose_ros_msgs::PointWithProb> right_hand_key_points_with_prob(rightHandKeypoints.getSize(1));
-                std::vector<openpose_ros_msgs::PointWithProb> left_hand_key_points_with_prob(leftHandKeypoints.getSize(1));
 
                 for (auto handPart = 0 ; handPart < rightHandKeypoints.getSize(1) ; handPart++)
                 {
@@ -241,13 +234,11 @@ void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<op::Datum>>& datum
                     {
                         num_left_hand_key_points_with_non_zero_prob++;
                     }
-                    right_hand_key_points_with_prob.at(handPart) = right_hand_point_with_prob;
-                    left_hand_key_points_with_prob.at(handPart) = left_hand_point_with_prob;
+                    human.right_hand_key_points_with_prob.at(handPart) = right_hand_point_with_prob;
+                    human.left_hand_key_points_with_prob.at(handPart) = left_hand_point_with_prob;
                 }
                 human.num_right_hand_key_points_with_non_zero_prob = num_right_hand_key_points_with_non_zero_prob;
                 human.num_left_hand_key_points_with_non_zero_prob = num_left_hand_key_points_with_non_zero_prob;
-                human.right_hand_key_points_with_prob = right_hand_key_points_with_prob;
-                human.left_hand_key_points_with_prob = left_hand_key_points_with_prob;
             }
 
             human_list.at(person) = human;
