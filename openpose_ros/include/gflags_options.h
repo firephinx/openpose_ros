@@ -12,6 +12,7 @@ DECLARE_int32(logging_level);
 DECLARE_bool(disable_multi_thread);
 DECLARE_int32(profile_speed);
 // OpenPose
+DECLARE_double(camera_fps);
 DECLARE_string(model_folder);
 DECLARE_string(output_resolution);
 DECLARE_int32(num_gpu);
@@ -41,6 +42,8 @@ DECLARE_double(hand_scale_range);
 DECLARE_bool(hand_tracking);
 // OpenPose 3-D Reconstruction
 DECLARE_bool(3d);
+DECLARE_int32(3d_min_views);
+DECLARE_int32(3d_views);
 // OpenPose Rendering
 DECLARE_int32(part_to_show);
 DECLARE_bool(disable_blending);

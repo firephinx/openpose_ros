@@ -20,6 +20,7 @@ namespace openpose_ros {
             const op::ScaleMode keypointScale;
             const std::vector<op::HeatMapType> heatMapTypes;
             const op::ScaleMode heatMapScale;
+            const bool multipleView;
             const bool enableGoogleLogging;
 
             op::Wrapper<std::vector<op::Datum>> opWrapper;

@@ -12,7 +12,7 @@ Tested on:
 
 ## Installation Steps
 
-1. Install openpose (not in catkin_workspace) using instructions from here: https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/installation.md.
+1. Install openpose (not in catkin_workspace) using instructions from here: https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/installation.md. Make sure to run `sudo make install` in the build folder at the end.
    ```bash
    git clone https://github.com/CMU-Perceptual-Computing-Lab/openpose.git
    ```

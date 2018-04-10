@@ -10,11 +10,43 @@ OpenPoseROSIO::OpenPoseROSIO(OpenPose &openPose): it_(nh_)
 
     nh_.param("/openpose_ros_node/image_topic", image_topic, std::string("/camera/image_raw"));
     nh_.param("/openpose_ros_node/output_topic", output_topic, std::string("/openpose_ros/human_list"));
+    nh_.param("/openpose_ros_node/display_output", display_output_flag_, true);
+    nh_.param("/openpose_ros_node/print_keypoints", print_keypoints_flag_, false);
+    nh_.param("/openpose_ros_node/save_original_video", save_original_video_flag_, false);
+    nh_.param("/openpose_ros_node/save_openpose_video", save_openpose_video_flag_, false);
+    nh_.param("/openpose_ros_node/original_video_file_name", original_video_file_name_, std::string(""));
+    nh_.param("/openpose_ros_node/openpose_video_file_name", openpose_video_file_name_, std::string(""));
+    nh_.param("/openpose_ros_node/video_fps", video_fps_, 10);
 
     image_sub_ = it_.subscribe(image_topic, 1, &OpenPoseROSIO::processImage, this);
     openpose_human_list_pub_ = nh_.advertise<openpose_ros_msgs::OpenPoseHumanList>(output_topic, 10);
     cv_img_ptr_ = nullptr;
     openpose_ = &openPose;
+
+    if(save_original_video_flag_)
+    {
+        if(original_video_file_name_.empty())
+        {
+            std::cout << "No original video filename was provided. Not saving original video." << std::endl; 
+            save_original_video_flag_ = false;
+        }
+        else
+        {
+            original_video_writer_initialized_ = false;
+        }
+    }
+    if(save_openpose_video_flag_)
+    {
+        if(openpose_video_file_name_.empty())
+        {
+            std::cout << "No openpose video filename was provided. Not saving openpose video." << std::endl; 
+            save_openpose_video_flag_ = false;
+        }
+        else
+        {
+            openpose_video_writer_initialized_ = false;
+        }
+    }
 }
 
 void OpenPoseROSIO::processImage(const sensor_msgs::ImageConstPtr& msg)
@@ -28,8 +60,22 @@ void OpenPoseROSIO::processImage(const sensor_msgs::ImageConstPtr& msg)
     std::shared_ptr<std::vector<op::Datum>> datumProcessed;
     if (successfullyEmplaced && openpose_->waitAndPop(datumProcessed))
     {
-        display(datumProcessed);
-        printKeypoints(datumProcessed);
+        if(display_output_flag_)
+        {
+            display(datumProcessed);
+        }
+        if(print_keypoints_flag_)
+        {
+            printKeypoints(datumProcessed);
+        }
+        if(save_original_video_flag_)
+        {
+            saveOriginalVideo(datumToProcess);
+        }
+        if(save_openpose_video_flag_)
+        {
+            saveOpenPoseVideo(datumProcessed);
+        }
         publish(datumProcessed);
     }
     else
@@ -85,6 +131,48 @@ bool OpenPoseROSIO::display(const std::shared_ptr<std::vector<op::Datum>>& datum
         cv::imshow("User worker GUI", datumsPtr->at(0).cvOutputData);
         // Display image and sleeps at least 1 ms (it usually sleeps ~5-10 msec to display the image)
         key = (char)cv::waitKey(1);
+    }
+    else
+        op::log("Nullptr or empty datumsPtr found.", op::Priority::High, __LINE__, __FUNCTION__, __FILE__);
+    return (key == 27);
+}
+
+bool OpenPoseROSIO::saveOriginalVideo(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr)
+{
+    char key = ' ';
+    if (datumsPtr != nullptr && !datumsPtr->empty())
+    {
+        cv::Mat current_image = datumsPtr->at(0).cvInputData;
+        if(!current_image.empty())
+        {
+            if(!original_video_writer_initialized_)
+            {
+                original_video_writer_ = cv::VideoWriter(original_video_file_name_, CV_FOURCC('M','J','P','G'), video_fps_, current_image.size());
+                original_video_writer_initialized_ = true;
+            }   
+            original_video_writer_.write(current_image);
+        }
+    }
+    else
+        op::log("Nullptr or empty datumsPtr found.", op::Priority::High, __LINE__, __FUNCTION__, __FILE__);
+    return (key == 27);
+}
+
+bool OpenPoseROSIO::saveOpenPoseVideo(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr)
+{
+    char key = ' ';
+    if (datumsPtr != nullptr && !datumsPtr->empty())
+    {
+        cv::Mat current_image = datumsPtr->at(0).cvOutputData;
+        if(!current_image.empty())
+        {
+            if(!openpose_video_writer_initialized_)
+            {
+                openpose_video_writer_ = cv::VideoWriter(openpose_video_file_name_, CV_FOURCC('M','J','P','G'), video_fps_, current_image.size());
+                openpose_video_writer_initialized_ = true;
+            }   
+            openpose_video_writer_.write(current_image);
+        }
     }
     else
         op::log("Nullptr or empty datumsPtr found.", op::Priority::High, __LINE__, __FUNCTION__, __FILE__);
@@ -251,4 +339,16 @@ void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<op::Datum>>& datum
     }
     else
         op::log("Nullptr or empty datumsPtr found.", op::Priority::High, __LINE__, __FUNCTION__, __FILE__);
+}
+
+void OpenPoseROSIO::stop()
+{
+    if(save_original_video_flag_)
+    {
+        original_video_writer_.release();
+    }
+    if(save_openpose_video_flag_)
+    {
+        openpose_video_writer_.release();
+    }
 }

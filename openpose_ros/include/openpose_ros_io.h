@@ -8,6 +8,7 @@
 #include <std_msgs/Header.h>
 
 #include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>  // Video write
 
 #include <openpose_ros_msgs/BoundingBox.h>
 #include <openpose_ros_msgs/OpenPoseHuman.h>
@@ -34,6 +35,21 @@ namespace openpose_ros {
 
             OpenPose* openpose_;
 
+            bool display_output_flag_;
+            bool print_keypoints_flag_;
+
+            bool save_original_video_flag_;
+            std::string original_video_file_name_;
+            bool original_video_writer_initialized_;
+            cv::VideoWriter original_video_writer_;
+
+            bool save_openpose_video_flag_;
+            std::string openpose_video_file_name_;
+            bool openpose_video_writer_initialized_;
+            cv::VideoWriter openpose_video_writer_;
+
+            int video_fps_;
+
         public:
             OpenPoseROSIO(OpenPose &openPose);
 
@@ -47,11 +63,17 @@ namespace openpose_ros {
 
             bool display(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr);
 
+            bool saveOriginalVideo(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr);
+
+            bool saveOpenPoseVideo(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr);
+
             cv_bridge::CvImagePtr& getCvImagePtr();
 
             void printKeypoints(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr);
 
             void publish(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr);
+
+            void stop();
     };
 }
 

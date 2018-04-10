@@ -46,6 +46,7 @@ int openPoseROS()
 
     op::log("Stopping thread(s)", op::Priority::High);
     openPose.stop();
+    openPoseROSIO.stop();
 
     // Measuring total time
     const auto now = std::chrono::high_resolution_clock::now();
