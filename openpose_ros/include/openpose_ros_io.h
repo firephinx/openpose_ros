@@ -31,7 +31,7 @@ namespace openpose_ros {
             image_transport::ImageTransport it_;
             image_transport::Subscriber image_sub_;
             cv_bridge::CvImagePtr cv_img_ptr_;
-            std_msgs::Header rgb_image_header_;
+            std_msgs::Header image_header_;
 
             OpenPose* openpose_;
 

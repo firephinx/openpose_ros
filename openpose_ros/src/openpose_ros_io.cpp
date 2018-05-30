@@ -90,7 +90,7 @@ void OpenPoseROSIO::convertImage(const sensor_msgs::ImageConstPtr& msg)
     try
     {
         cv_img_ptr_ = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-        rgb_image_header_ = msg->header;
+        image_header_ = msg->header;
     }
     catch (cv_bridge::Exception& e)
     {
@@ -248,7 +248,7 @@ void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<op::Datum>>& datum
 
         openpose_ros_msgs::OpenPoseHumanList human_list_msg;
         human_list_msg.header.stamp = ros::Time::now();
-        human_list_msg.rgb_image_header = rgb_image_header_;
+        human_list_msg.image_header = image_header_;
         human_list_msg.num_humans = poseKeypoints.getSize(0);
         
         std::vector<openpose_ros_msgs::OpenPoseHuman> human_list(poseKeypoints.getSize(0));
