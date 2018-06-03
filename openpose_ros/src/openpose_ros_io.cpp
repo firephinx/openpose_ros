@@ -2,21 +2,21 @@
 
 using namespace openpose_ros;
 
-OpenPoseROSIO::OpenPoseROSIO(OpenPose &openPose): it_(nh_)
+OpenPoseROSIO::OpenPoseROSIO(OpenPose &openPose): nh_("/openpose_ros_node"), it_(nh_)
 {
     // Subscribe to input video feed and publish human lists as output
     std::string image_topic;
     std::string output_topic;
 
-    nh_.param("/openpose_ros_node/image_topic", image_topic, std::string("/camera/image_raw"));
-    nh_.param("/openpose_ros_node/output_topic", output_topic, std::string("/openpose_ros/human_list"));
-    nh_.param("/openpose_ros_node/display_output", display_output_flag_, true);
-    nh_.param("/openpose_ros_node/print_keypoints", print_keypoints_flag_, false);
-    nh_.param("/openpose_ros_node/save_original_video", save_original_video_flag_, false);
-    nh_.param("/openpose_ros_node/save_openpose_video", save_openpose_video_flag_, false);
-    nh_.param("/openpose_ros_node/original_video_file_name", original_video_file_name_, std::string(""));
-    nh_.param("/openpose_ros_node/openpose_video_file_name", openpose_video_file_name_, std::string(""));
-    nh_.param("/openpose_ros_node/video_fps", video_fps_, 10);
+    nh_.param("image_topic", image_topic, std::string("/camera/image_raw"));
+    nh_.param("output_topic", output_topic, std::string("/openpose_ros/human_list"));
+    nh_.param("display_output", display_output_flag_, true);
+    nh_.param("print_keypoints", print_keypoints_flag_, false);
+    nh_.param("save_original_video", save_original_video_flag_, false);
+    nh_.param("save_openpose_video", save_openpose_video_flag_, false);
+    nh_.param("original_video_file_name", original_video_file_name_, std::string(""));
+    nh_.param("openpose_video_file_name", openpose_video_file_name_, std::string(""));
+    nh_.param("video_fps", video_fps_, 10);
 
     image_sub_ = it_.subscribe(image_topic, 1, &OpenPoseROSIO::processImage, this);
     openpose_human_list_pub_ = nh_.advertise<openpose_ros_msgs::OpenPoseHumanList>(output_topic, 10);
