@@ -15,25 +15,24 @@ namespace openpose_ros {
             const op::Point<int> netInputSize;
             const op::Point<int> faceNetInputSize;
             const op::Point<int> handNetInputSize;
+            const op::PoseMode poseMode;
             const op::PoseModel poseModel;
-            const std::string writeJson;
-            const op::ScaleMode keypointScale;
+            const op::ScaleMode keypointScaleMode;
             const std::vector<op::HeatMapType> heatMapTypes;
-            const op::ScaleMode heatMapScale;
+            const op::ScaleMode heatMapScaleMode;
+            const op::Detector faceDetector;
+            const op::Detector handDetector;
             const bool multipleView;
             const bool enableGoogleLogging;
 
-            op::Wrapper<std::vector<op::Datum>> opWrapper;
+            op::Wrapper opWrapper;
 
             const op::WrapperStructPose wrapperStructPose;
             const op::WrapperStructFace wrapperStructFace;
             const op::WrapperStructHand wrapperStructHand;
-
-            const op::DisplayMode displayMode;
-            const bool guiVerbose;
-            const bool fullScreen;
-
+            const op::WrapperStructExtra wrapperStructExtra;
             const op::WrapperStructOutput wrapperStructOutput;
+            const op::WrapperStructGui wrapperStructGui;
 
         public:
             OpenPose();
@@ -42,9 +41,9 @@ namespace openpose_ros {
 
             void start();
 
-            bool waitAndEmplace(std::shared_ptr<std::vector<op::Datum>> &datumToProcess);
+            bool waitAndEmplace(std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>> &datumToProcess);
 
-            bool waitAndPop(std::shared_ptr<std::vector<op::Datum>> &datumProcessed);
+            bool waitAndPop(std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>> &datumProcessed);
 
             void stop();
     };

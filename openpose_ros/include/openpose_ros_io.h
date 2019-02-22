@@ -59,19 +59,19 @@ namespace openpose_ros {
 
             void convertImage(const sensor_msgs::ImageConstPtr& msg);
 
-            std::shared_ptr<std::vector<op::Datum>> createDatum();
+            std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>> createDatum();
 
-            bool display(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr);
+            bool display(const std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>>& datumsPtr);
 
-            bool saveOriginalVideo(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr);
+            bool saveOriginalVideo(const std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>>& datumsPtr);
 
-            bool saveOpenPoseVideo(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr);
+            bool saveOpenPoseVideo(const std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>>& datumsPtr);
 
             cv_bridge::CvImagePtr& getCvImagePtr();
 
-            void printKeypoints(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr);
+            void printKeypoints(const std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>>& datumsPtr);
 
-            void publish(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr);
+            void publish(const std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>>& datumsPtr);
 
             void stop();
     };

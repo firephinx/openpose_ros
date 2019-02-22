@@ -52,12 +52,12 @@ OpenPoseROSIO::OpenPoseROSIO(OpenPose &openPose): nh_("/openpose_ros_node"), it_
 void OpenPoseROSIO::processImage(const sensor_msgs::ImageConstPtr& msg)
 {
     convertImage(msg);
-    std::shared_ptr<std::vector<op::Datum>> datumToProcess = createDatum();
+    std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>> datumToProcess = createDatum();
 
     bool successfullyEmplaced = openpose_->waitAndEmplace(datumToProcess);
     
     // Pop frame
-    std::shared_ptr<std::vector<op::Datum>> datumProcessed;
+    std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>> datumProcessed;
     if (successfullyEmplaced && openpose_->waitAndPop(datumProcessed))
     {
         if(display_output_flag_)
@@ -99,7 +99,7 @@ void OpenPoseROSIO::convertImage(const sensor_msgs::ImageConstPtr& msg)
     }
 }
 
-std::shared_ptr<std::vector<op::Datum>> OpenPoseROSIO::createDatum()
+std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>> OpenPoseROSIO::createDatum()
 {
     // Close program when empty frame
     if (cv_img_ptr_ == nullptr)
@@ -109,18 +109,19 @@ std::shared_ptr<std::vector<op::Datum>> OpenPoseROSIO::createDatum()
     else // if (cv_img_ptr_ == nullptr)
     {
         // Create new datum
-        auto datumsPtr = std::make_shared<std::vector<op::Datum>>();
+        auto datumsPtr = std::make_shared<std::vector<std::shared_ptr<op::Datum>>>();
         datumsPtr->emplace_back();
-        auto& datum = datumsPtr->at(0);
+        auto& datumPtr = datumsPtr->at(0);
+        datumPtr = std::make_shared<op::Datum>();
 
         // Fill datum
-        datum.cvInputData = cv_img_ptr_->image;
+        datumPtr->cvInputData = cv_img_ptr_->image;
 
         return datumsPtr;
     }
 }
 
-bool OpenPoseROSIO::display(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr)
+bool OpenPoseROSIO::display(const std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>>& datumsPtr)
 {
     // User's displaying/saving/other processing here
         // datum.cvOutputData: rendered frame with pose or heatmaps
@@ -128,7 +129,7 @@ bool OpenPoseROSIO::display(const std::shared_ptr<std::vector<op::Datum>>& datum
     char key = ' ';
     if (datumsPtr != nullptr && !datumsPtr->empty())
     {
-        cv::imshow("User worker GUI", datumsPtr->at(0).cvOutputData);
+        cv::imshow("User worker GUI", datumsPtr->at(0)->cvOutputData);
         // Display image and sleeps at least 1 ms (it usually sleeps ~5-10 msec to display the image)
         key = (char)cv::waitKey(1);
     }
@@ -137,12 +138,12 @@ bool OpenPoseROSIO::display(const std::shared_ptr<std::vector<op::Datum>>& datum
     return (key == 27);
 }
 
-bool OpenPoseROSIO::saveOriginalVideo(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr)
+bool OpenPoseROSIO::saveOriginalVideo(const std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>>& datumsPtr)
 {
     char key = ' ';
     if (datumsPtr != nullptr && !datumsPtr->empty())
     {
-        cv::Mat current_image = datumsPtr->at(0).cvInputData;
+        cv::Mat current_image = datumsPtr->at(0)->cvInputData;
         if(!current_image.empty())
         {
             if(!original_video_writer_initialized_)
@@ -158,12 +159,12 @@ bool OpenPoseROSIO::saveOriginalVideo(const std::shared_ptr<std::vector<op::Datu
     return (key == 27);
 }
 
-bool OpenPoseROSIO::saveOpenPoseVideo(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr)
+bool OpenPoseROSIO::saveOpenPoseVideo(const std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>>& datumsPtr)
 {
     char key = ' ';
     if (datumsPtr != nullptr && !datumsPtr->empty())
     {
-        cv::Mat current_image = datumsPtr->at(0).cvOutputData;
+        cv::Mat current_image = datumsPtr->at(0)->cvOutputData;
         if(!current_image.empty())
         {
             if(!openpose_video_writer_initialized_)
@@ -184,14 +185,14 @@ cv_bridge::CvImagePtr& OpenPoseROSIO::getCvImagePtr()
     return cv_img_ptr_;
 }
 
-void OpenPoseROSIO::printKeypoints(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr)
+void OpenPoseROSIO::printKeypoints(const std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>>& datumsPtr)
 {
     // Example: How to use the pose keypoints
     if (datumsPtr != nullptr && !datumsPtr->empty())
     {
         op::log("\nKeypoints:");
         // Accesing each element of the keypoints
-        const auto& poseKeypoints = datumsPtr->at(0).poseKeypoints;
+        const auto& poseKeypoints = datumsPtr->at(0)->poseKeypoints;
         op::log("Person pose keypoints:");
         for (auto person = 0 ; person < poseKeypoints.getSize(0) ; person++)
         {
@@ -206,22 +207,22 @@ void OpenPoseROSIO::printKeypoints(const std::shared_ptr<std::vector<op::Datum>>
         }
         op::log(" ");
         // Alternative: just getting std::string equivalent
-        op::log("Face keypoints: " + datumsPtr->at(0).faceKeypoints.toString());
-        op::log("Left hand keypoints: " + datumsPtr->at(0).handKeypoints[0].toString());
-        op::log("Right hand keypoints: " + datumsPtr->at(0).handKeypoints[1].toString());
+        op::log("Face keypoints: " + datumsPtr->at(0)->faceKeypoints.toString());
+        op::log("Left hand keypoints: " + datumsPtr->at(0)->handKeypoints[0].toString());
+        op::log("Right hand keypoints: " + datumsPtr->at(0)->handKeypoints[1].toString());
         // Heatmaps
-        const auto& poseHeatMaps = datumsPtr->at(0).poseHeatMaps;
+        const auto& poseHeatMaps = datumsPtr->at(0)->poseHeatMaps;
         if (!poseHeatMaps.empty())
         {
             op::log("Pose heatmaps size: [" + std::to_string(poseHeatMaps.getSize(0)) + ", "
                     + std::to_string(poseHeatMaps.getSize(1)) + ", "
                     + std::to_string(poseHeatMaps.getSize(2)) + "]");
-            const auto& faceHeatMaps = datumsPtr->at(0).faceHeatMaps;
+            const auto& faceHeatMaps = datumsPtr->at(0)->faceHeatMaps;
             op::log("Face heatmaps size: [" + std::to_string(faceHeatMaps.getSize(0)) + ", "
                     + std::to_string(faceHeatMaps.getSize(1)) + ", "
                     + std::to_string(faceHeatMaps.getSize(2)) + ", "
                     + std::to_string(faceHeatMaps.getSize(3)) + "]");
-            const auto& handHeatMaps = datumsPtr->at(0).handHeatMaps;
+            const auto& handHeatMaps = datumsPtr->at(0)->handHeatMaps;
             op::log("Left hand heatmaps size: [" + std::to_string(handHeatMaps[0].getSize(0)) + ", "
                     + std::to_string(handHeatMaps[0].getSize(1)) + ", "
                     + std::to_string(handHeatMaps[0].getSize(2)) + ", "
@@ -236,15 +237,15 @@ void OpenPoseROSIO::printKeypoints(const std::shared_ptr<std::vector<op::Datum>>
         op::log("Nullptr or empty datumsPtr found.", op::Priority::High, __LINE__, __FUNCTION__, __FILE__);
 }
 
-void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr)
+void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>>& datumsPtr)
 {
-    if (datumsPtr != nullptr && !datumsPtr->empty() && !FLAGS_body_disable)
+    if (datumsPtr != nullptr && !datumsPtr->empty())
     {
-        const auto& poseKeypoints = datumsPtr->at(0).poseKeypoints;
-        const auto& faceKeypoints = datumsPtr->at(0).faceKeypoints;
-        const auto& leftHandKeypoints = datumsPtr->at(0).handKeypoints[0];
-        const auto& rightHandKeypoints = datumsPtr->at(0).handKeypoints[1];
-        std::vector<op::Rectangle<float>>& face_rectangles = datumsPtr->at(0).faceRectangles;
+        const auto& poseKeypoints = datumsPtr->at(0)->poseKeypoints;
+        const auto& faceKeypoints = datumsPtr->at(0)->faceKeypoints;
+        const auto& leftHandKeypoints = datumsPtr->at(0)->handKeypoints[0];
+        const auto& rightHandKeypoints = datumsPtr->at(0)->handKeypoints[1];
+        std::vector<op::Rectangle<float>>& face_rectangles = datumsPtr->at(0)->faceRectangles;
 
         openpose_ros_msgs::OpenPoseHumanList human_list_msg;
         human_list_msg.header.stamp = ros::Time::now();
