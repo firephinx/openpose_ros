@@ -34,8 +34,8 @@ OpenPose::OpenPose() : outputSize(op::flagsToPoint(FLAGS_output_resolution, "-1x
                                            FLAGS_write_json, FLAGS_write_coco_json, FLAGS_write_coco_foot_json, FLAGS_write_coco_json_variant,
                                            FLAGS_write_images, FLAGS_write_images_format, FLAGS_write_video, FLAGS_write_video_fps,
                                            FLAGS_write_video_with_audio, FLAGS_write_heatmaps, FLAGS_write_heatmaps_format, FLAGS_write_video_3d,
-                                           FLAGS_write_video_adam, FLAGS_write_bvh, FLAGS_udp_host, FLAGS_udp_port),
-                       wrapperStructGui(op::flagsToDisplayMode(FLAGS_display, FLAGS_3d), !FLAGS_no_gui_verbose, FLAGS_fullscreen)
+                                           FLAGS_write_video_adam, FLAGS_write_bvh, FLAGS_udp_host, FLAGS_udp_port)
+                       // wrapperStructGui(op::flagsToDisplayMode(FLAGS_display, FLAGS_3d), !FLAGS_no_gui_verbose, FLAGS_fullscreen)
 
 
 {
@@ -56,7 +56,7 @@ OpenPose::OpenPose() : outputSize(op::flagsToPoint(FLAGS_output_resolution, "-1x
     opWrapper.configure(wrapperStructHand);
     opWrapper.configure(wrapperStructExtra);
     opWrapper.configure(wrapperStructOutput);
-    opWrapper.configure(wrapperStructGui);
+    // opWrapper.configure(wrapperStructGui);
 
     // Set to single-thread running (to debug and/or reduce latency)
     if (FLAGS_disable_multi_thread)

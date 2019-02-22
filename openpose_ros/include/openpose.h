@@ -32,7 +32,7 @@ namespace openpose_ros {
             const op::WrapperStructHand wrapperStructHand;
             const op::WrapperStructExtra wrapperStructExtra;
             const op::WrapperStructOutput wrapperStructOutput;
-            const op::WrapperStructGui wrapperStructGui;
+            // const op::WrapperStructGui wrapperStructGui;
 
         public:
             OpenPose();

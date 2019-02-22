@@ -2,15 +2,16 @@
 
   <!-- Start openpose_ros -->
   <node pkg="openpose_ros" type="openpose_ros_node" name="openpose_ros_node" output="screen">
-    <param name="image_topic"               value="/camera/image_raw" />
-    <param name="output_topic"              value="/openpose_ros/human_list" />
-    <param name="display_output"            value="true" />
-    <param name="print_keypoints"           value="false" />
-    <param name="save_original_video"       value="false" />
-    <param name="save_openpose_video"       value="false" />
-    <param name="original_video_file_name"  value="original_video_output.avi" />
-    <param name="openpose_video_file_name"  value="openpose_video_output.avi" />
-    <param name="video_fps"                 value="10" />
+    <param name="image_topic"                value="/camera/image" />
+    <param name="input_image_transport_type" value="raw" />
+    <param name="output_topic"               value="/openpose_ros/human_list" />
+    <param name="display_output"             value="true" />
+    <param name="print_keypoints"            value="false" />
+    <param name="save_original_video"        value="false" />
+    <param name="save_openpose_video"        value="false" />
+    <param name="original_video_file_name"   value="original_video_output.avi" />
+    <param name="openpose_video_file_name"   value="openpose_video_output.avi" />
+    <param name="video_fps"                  value="10" />
   </node>
 
 </launch>
