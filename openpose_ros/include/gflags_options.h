@@ -87,7 +87,7 @@ DECLARE_string(write_video_3d);
 DECLARE_string(write_video_adam);
 DECLARE_string(write_json);
 DECLARE_string(write_coco_json);
-DECLARE_string(write_coco_foot_json);
+DECLARE_int32(write_coco_json_variants);
 DECLARE_int32(write_coco_json_variant);
 DECLARE_string(write_heatmaps);
 DECLARE_string(write_heatmaps_format);

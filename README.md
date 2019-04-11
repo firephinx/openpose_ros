@@ -6,30 +6,36 @@ Example ROS catkin package that utilizes the OpenPose library from https://githu
 Tested on:
 * Ubuntu 14.04 / Ubuntu 16.04
 * ROS Indigo / Kinetic
-* CUDA 8.0
-* cuDNN 5.1 / cuDNN 6.0
+* CUDA 8.0 / CUDA 10.0
+* cuDNN 5.1 / cuDNN 6.0 / cuDNN 7.2.4
 * OpenCV 3.3 / OpenCV 3.4
 
 ## Installation Steps
 
-1. Install openpose (not in catkin_workspace) using instructions from here: https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/installation.md. Make sure to run `sudo make install` in the build folder at the end.
+1. Clone OpenPose somewhere not in your catkin_workspace.
    ```bash
    git clone https://github.com/CMU-Perceptual-Computing-Lab/openpose.git
    ```
-2. Clone this repository into your catkin_workspace/src directory.
+2. IMPORTANT: I do not update this repository very frequently and the maintainers of OpenPose tend to change their API frequently, so I can only guarantee that it will work with certain versions of OpenPose. Currently I have updated this ros wrapper to work with commit 2268242. You can use get that version by running the following commands:
+   ```bash
+   cd openpose
+   git checkout 2268242
+   ```
+3. Install openpose using instructions from here: https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/2268242e260e6282bfe0137a0e3bd8fb7726cea3/doc/installation.md. Make sure to run `sudo make install` in the build folder at the end.
+4. Clone this repository into your catkin_workspace/src directory.
    ```bash
    git clone https://github.com/firephinx/openpose_ros.git
    ```
-3. Modify the model_folder line in openpose_ros/src/gflags_options.cpp to where openpose is installed.
+5. Modify the model_folder line in openpose_ros/src/gflags_options.cpp to where openpose is installed.
    ```bash
    DEFINE_string(model_folder,             "/path/to/openpose/models/",      "Folder path (absolute or relative) where the models (pose, face, ...) are located.");
    ```
-4. Modify the image_topic parameter in openpose_ros/launch/openpose_ros.launch to the image_topic you want to process.
+6. Modify the image_topic parameter in openpose_ros/launch/openpose_ros.launch to the image_topic you want to process.
    ```bash
    <param name="image_topic"     value="/camera/image_raw" />
    ```
-5. Modify the other parameters in openpose_ros/src/gflags_options.cpp and openpose_ros/launch/openpose_ros.launch to your liking such as enabling face and hands detection.
-6. Run catkin_make from your catkin_workspace directory.
+7. Modify the other parameters in openpose_ros/src/gflags_options.cpp and openpose_ros/launch/openpose_ros.launch to your liking such as enabling face and hands detection.
+8. Run catkin_make from your catkin_workspace directory.
 
 ### Potential Installation Issues
 1. If cv_bridge is causing you errors and/or you decide to use OpenCV 3.2+, copy the cv_bridge folder from https://github.com/ros-perception/vision_opencv into your catkin_workspace/src directory. 
