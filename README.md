@@ -16,12 +16,12 @@ Tested on:
    ```bash
    git clone https://github.com/CMU-Perceptual-Computing-Lab/openpose.git
    ```
-2. IMPORTANT: I do not update this repository very frequently and the maintainers of OpenPose tend to change their API frequently, so I can only guarantee that it will work with certain versions of OpenPose. Currently I have updated this ros wrapper to work with commit 2268242. You can use get that version by running the following commands:
+2. IMPORTANT: I do not update this repository very frequently and the maintainers of OpenPose tend to change their API frequently, so I can only guarantee that it will work with certain versions of OpenPose. Currently I have updated this ros wrapper to work with commit 1e4a785. You can use get that version by running the following commands:
    ```bash
    cd openpose
-   git checkout 2268242
+   git checkout 1e4a785
    ```
-3. Install openpose using instructions from here: https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/2268242e260e6282bfe0137a0e3bd8fb7726cea3/doc/installation.md. Make sure to run `sudo make install` in the build folder at the end.
+3. Install openpose using instructions from here: https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/1e4a7853572e491c5ec0afac4288346c9004065f/doc/installation.md. Make sure to run `sudo make install` in the build folder at the end.
 4. Clone this repository into your catkin_workspace/src directory.
    ```bash
    git clone https://github.com/firephinx/openpose_ros.git
