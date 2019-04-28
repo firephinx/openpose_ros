@@ -6,8 +6,8 @@ Example ROS catkin package that utilizes the OpenPose library from https://githu
 Tested on:
 * Ubuntu 14.04 / Ubuntu 16.04
 * ROS Indigo / Kinetic
-* CUDA 8.0 / CUDA 10.0
-* cuDNN 5.1 / cuDNN 6.0 / cuDNN 7.2.4
+* CUDA 8.0 / CUDA 10.0 / CUDA 10.1
+* cuDNN 5.1 / cuDNN 6.0 / cuDNN 7.2.4 / cuDNN 7.5.0
 * OpenCV 3.3 / OpenCV 3.4
 
 ## Installation Steps
@@ -16,12 +16,12 @@ Tested on:
    ```bash
    git clone https://github.com/CMU-Perceptual-Computing-Lab/openpose.git
    ```
-2. IMPORTANT: I do not update this repository very frequently and the maintainers of OpenPose tend to change their API frequently, so I can only guarantee that it will work with certain versions of OpenPose. Currently I have updated this ros wrapper to work with commit 1e4a785. You can use get that version by running the following commands:
+2. IMPORTANT: I do not update this repository very frequently and the maintainers of OpenPose tend to change their API frequently, so I can only guarantee that it will work with certain versions of OpenPose. Currently I have updated this ros wrapper to work with commit 6d3ff8b. You can use get that version by running the following commands:
    ```bash
    cd openpose
-   git checkout 1e4a785
+   git checkout 6d3ff8b
    ```
-3. Install openpose using instructions from here: https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/1e4a7853572e491c5ec0afac4288346c9004065f/doc/installation.md. Make sure to run `sudo make install` in the build folder at the end.
+3. Install openpose using instructions from here: https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/6d3ff8b3361cb5c098294b486a25c9921ad864c2/doc/installation.md. Make sure to run `sudo make install` in the build folder at the end.
 4. Clone this repository into your catkin_workspace/src directory.
    ```bash
    git clone https://github.com/firephinx/openpose_ros.git
