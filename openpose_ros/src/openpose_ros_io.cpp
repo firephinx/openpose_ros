@@ -268,6 +268,11 @@ void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<std::shared_ptr<op
         {
             openpose_ros_msgs::OpenPoseHuman human;
 
+            double body_min_x = -1;
+            double body_max_x = -1;
+            double body_min_y = -1;
+            double body_max_y = -1;
+
             int num_body_key_points_with_non_zero_prob = 0;
             for (auto bodyPart = 0 ; bodyPart < poseKeypoints.getSize(1) ; bodyPart++)
             {
@@ -278,10 +283,32 @@ void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<std::shared_ptr<op
                 if(body_point_with_prob.prob > 0)
                 {
                     num_body_key_points_with_non_zero_prob++;
+
+                    if(body_min_x == -1 || body_point_with_prob.x < body_min_x)
+                    {
+                        body_min_x = body_point_with_prob.x;
+                    }
+                    if(body_point_with_prob.x > body_max_x)
+                    {
+                        body_max_x = body_point_with_prob.x;
+                    }
+
+                    if(body_min_y == -1 || body_point_with_prob.y < body_min_y)
+                    {
+                        body_min_y = body_point_with_prob.y;
+                    }
+                    if(body_point_with_prob.y > body_max_y)
+                    {
+                        body_max_y = body_point_with_prob.y;
+                    }
                 }
                 human.body_key_points_with_prob.at(bodyPart) = body_point_with_prob;
             }
             human.num_body_key_points_with_non_zero_prob = num_body_key_points_with_non_zero_prob;
+            human.body_bounding_box.x = body_min_x;
+            human.body_bounding_box.y = body_min_y;
+            human.body_bounding_box.width = body_max_x - body_min_x;
+            human.body_bounding_box.height = body_max_y - body_min_y;
 
             if(FLAGS_face)
             {
