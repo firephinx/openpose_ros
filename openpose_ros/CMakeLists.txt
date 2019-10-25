@@ -39,7 +39,7 @@ include_directories(
 )
 
 add_executable(${PROJECT_NAME}_node src/openpose_ros_node.cpp src/openpose.cpp src/openpose_ros_io.cpp 
-                                    src/gflags_options.cpp)
+                                    src/openpose_flags.cpp)
 
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 

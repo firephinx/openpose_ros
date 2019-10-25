@@ -16,7 +16,7 @@
 #include <openpose_ros_msgs/PointWithProb.h>
 
 #include <openpose.h>
-#include <gflags_options.h>
+#include <openpose_flags.h>
 
 // OpenPose dependencies
 #include <openpose/headers.hpp>

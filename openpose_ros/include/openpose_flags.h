@@ -45,14 +45,14 @@ DECLARE_int32(hand_detector);
 DECLARE_string(hand_net_resolution);
 DECLARE_int32(hand_scale_number);
 DECLARE_double(hand_scale_range);
-// Extra algorithms
-DECLARE_bool(identification);
-DECLARE_int32(tracking);
-DECLARE_int32(ik_threads);
 // OpenPose 3-D Reconstruction
 DECLARE_bool(3d);
 DECLARE_int32(3d_min_views);
 DECLARE_int32(3d_views);
+// Extra algorithms
+DECLARE_bool(identification);
+DECLARE_int32(tracking);
+DECLARE_int32(ik_threads);
 // OpenPose Rendering
 DECLARE_int32(part_to_show);
 DECLARE_bool(disable_blending);

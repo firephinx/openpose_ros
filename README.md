@@ -16,17 +16,17 @@ Tested on:
    ```bash
    git clone https://github.com/CMU-Perceptual-Computing-Lab/openpose.git
    ```
-2. IMPORTANT: I do not update this repository very frequently and the maintainers of OpenPose tend to change their API frequently, so I can only guarantee that it will work with certain versions of OpenPose. Currently I have updated this ros wrapper to work with commit 6d3ff8b. You can use get that version by running the following commands:
+2. IMPORTANT: I do not update this repository very frequently and the maintainers of OpenPose tend to change their API frequently, so I can only guarantee that it will work with certain versions of OpenPose. Currently I have updated this ros wrapper to work with commit c0017b6. You can use get that version by running the following commands:
    ```bash
    cd openpose
-   git checkout 6d3ff8b
+   git checkout c0017b6
    ```
 3. Install openpose using instructions from here: https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/6d3ff8b3361cb5c098294b486a25c9921ad864c2/doc/installation.md. Make sure to run `sudo make install` in the build folder at the end.
 4. Clone this repository into your catkin_workspace/src directory.
    ```bash
    git clone https://github.com/firephinx/openpose_ros.git
    ```
-5. Modify the model_folder line in openpose_ros/src/gflags_options.cpp to where openpose is installed.
+5. Modify the model_folder line in openpose_ros/src/openpose_flags.cpp to where openpose is installed (line 30).
    ```bash
    DEFINE_string(model_folder,             "/path/to/openpose/models/",      "Folder path (absolute or relative) where the models (pose, face, ...) are located.");
    ```
@@ -34,7 +34,7 @@ Tested on:
    ```bash
    <param name="image_topic"     value="/camera/image_raw" />
    ```
-7. Modify the other parameters in openpose_ros/src/gflags_options.cpp and openpose_ros/launch/openpose_ros.launch to your liking such as enabling face and hands detection.
+7. Modify the other parameters in openpose_ros/src/openpose_flags.cpp and openpose_ros/launch/openpose_ros.launch to your liking such as enabling face and hands detection.
 8. Run catkin_make from your catkin_workspace directory.
 
 ### Potential Installation Issues

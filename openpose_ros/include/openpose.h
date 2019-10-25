@@ -1,7 +1,7 @@
 #ifndef _OPENPOSE
 #define _OPENPOSE
 
-#include <gflags_options.h>
+#include <openpose_flags.h>
 
 // OpenPose dependencies
 #include <openpose/headers.hpp>

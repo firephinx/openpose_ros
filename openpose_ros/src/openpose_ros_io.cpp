@@ -82,7 +82,7 @@ void OpenPoseROSIO::processImage(const sensor_msgs::ImageConstPtr& msg)
     }
     else
     {
-        op::log("Processed datum could not be emplaced.", op::Priority::High,
+        op::opLog("Processed datum could not be emplaced.", op::Priority::High,
                 __LINE__, __FUNCTION__, __FILE__);
     }
 }
@@ -117,7 +117,7 @@ std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>> OpenPoseROSIO::createDa
         datumPtr = std::make_shared<op::Datum>();
 
         // Fill datum
-        datumPtr->cvInputData = cv_img_ptr_->image;
+        datumPtr->cvInputData = OP_CV2OPCONSTMAT(cv_img_ptr_->image);
 
         return datumsPtr;
     }
@@ -131,12 +131,12 @@ bool OpenPoseROSIO::display(const std::shared_ptr<std::vector<std::shared_ptr<op
     char key = ' ';
     if (datumsPtr != nullptr && !datumsPtr->empty())
     {
-        cv::imshow("User worker GUI", datumsPtr->at(0)->cvOutputData);
+        cv::imshow("User worker GUI", OP_OP2CVCONSTMAT(datumsPtr->at(0)->cvOutputData));
         // Display image and sleeps at least 1 ms (it usually sleeps ~5-10 msec to display the image)
         key = (char)cv::waitKey(1);
     }
     else
-        op::log("Nullptr or empty datumsPtr found.", op::Priority::High, __LINE__, __FUNCTION__, __FILE__);
+        op::opLog("Nullptr or empty datumsPtr found.", op::Priority::High, __LINE__, __FUNCTION__, __FILE__);
     return (key == 27);
 }
 
@@ -145,7 +145,7 @@ bool OpenPoseROSIO::saveOriginalVideo(const std::shared_ptr<std::vector<std::sha
     char key = ' ';
     if (datumsPtr != nullptr && !datumsPtr->empty())
     {
-        cv::Mat current_image = datumsPtr->at(0)->cvInputData;
+        cv::Mat current_image = OP_OP2CVCONSTMAT(datumsPtr->at(0)->cvInputData);
         if(!current_image.empty())
         {
             if(!original_video_writer_initialized_)
@@ -157,7 +157,7 @@ bool OpenPoseROSIO::saveOriginalVideo(const std::shared_ptr<std::vector<std::sha
         }
     }
     else
-        op::log("Nullptr or empty datumsPtr found.", op::Priority::High, __LINE__, __FUNCTION__, __FILE__);
+        op::opLog("Nullptr or empty datumsPtr found.", op::Priority::High, __LINE__, __FUNCTION__, __FILE__);
     return (key == 27);
 }
 
@@ -166,7 +166,7 @@ bool OpenPoseROSIO::saveOpenPoseVideo(const std::shared_ptr<std::vector<std::sha
     char key = ' ';
     if (datumsPtr != nullptr && !datumsPtr->empty())
     {
-        cv::Mat current_image = datumsPtr->at(0)->cvOutputData;
+        cv::Mat current_image = OP_OP2CVCONSTMAT(datumsPtr->at(0)->cvOutputData);
         if(!current_image.empty())
         {
             if(!openpose_video_writer_initialized_)
@@ -178,7 +178,7 @@ bool OpenPoseROSIO::saveOpenPoseVideo(const std::shared_ptr<std::vector<std::sha
         }
     }
     else
-        op::log("Nullptr or empty datumsPtr found.", op::Priority::High, __LINE__, __FUNCTION__, __FILE__);
+        op::opLog("Nullptr or empty datumsPtr found.", op::Priority::High, __LINE__, __FUNCTION__, __FILE__);
     return (key == 27);
 }
 
@@ -192,13 +192,13 @@ void OpenPoseROSIO::printKeypoints(const std::shared_ptr<std::vector<std::shared
     // Example: How to use the pose keypoints
     if (datumsPtr != nullptr && !datumsPtr->empty())
     {
-        op::log("\nKeypoints:");
+        op::opLog("\nKeypoints:");
         // Accesing each element of the keypoints
         const auto& poseKeypoints = datumsPtr->at(0)->poseKeypoints;
-        op::log("Person pose keypoints:");
+        op::opLog("Person pose keypoints:");
         for (auto person = 0 ; person < poseKeypoints.getSize(0) ; person++)
         {
-            op::log("Person " + std::to_string(person) + " (x, y, score):");
+            op::opLog("Person " + std::to_string(person) + " (x, y, score):");
             for (auto bodyPart = 0 ; bodyPart < poseKeypoints.getSize(1) ; bodyPart++)
             {
                 std::string valueToPrint;
@@ -206,45 +206,45 @@ void OpenPoseROSIO::printKeypoints(const std::shared_ptr<std::vector<std::shared
                 {
                     valueToPrint += std::to_string(   poseKeypoints[{person, bodyPart, xyscore}]   ) + " ";
                 }
-                op::log(valueToPrint);
+                op::opLog(valueToPrint);
             }
         }
-        op::log(" ");
+        op::opLog(" ");
         // Alternative: just getting std::string equivalent
         if(FLAGS_face)
         {
-            op::log("Face keypoints: " + datumsPtr->at(0)->faceKeypoints.toString(), op::Priority::High);
+            op::opLog("Face keypoints: " + datumsPtr->at(0)->faceKeypoints.toString(), op::Priority::High);
         }
         if(FLAGS_hand)
         {
-            op::log("Left hand keypoints: " + datumsPtr->at(0)->handKeypoints[0].toString(), op::Priority::High);
-            op::log("Right hand keypoints: " + datumsPtr->at(0)->handKeypoints[1].toString(), op::Priority::High);
+            op::opLog("Left hand keypoints: " + datumsPtr->at(0)->handKeypoints[0].toString(), op::Priority::High);
+            op::opLog("Right hand keypoints: " + datumsPtr->at(0)->handKeypoints[1].toString(), op::Priority::High);
         }
         // Heatmaps
         const auto& poseHeatMaps = datumsPtr->at(0)->poseHeatMaps;
         if (!poseHeatMaps.empty())
         {
-            op::log("Pose heatmaps size: [" + std::to_string(poseHeatMaps.getSize(0)) + ", "
+            op::opLog("Pose heatmaps size: [" + std::to_string(poseHeatMaps.getSize(0)) + ", "
                     + std::to_string(poseHeatMaps.getSize(1)) + ", "
                     + std::to_string(poseHeatMaps.getSize(2)) + "]");
             const auto& faceHeatMaps = datumsPtr->at(0)->faceHeatMaps;
-            op::log("Face heatmaps size: [" + std::to_string(faceHeatMaps.getSize(0)) + ", "
+            op::opLog("Face heatmaps size: [" + std::to_string(faceHeatMaps.getSize(0)) + ", "
                     + std::to_string(faceHeatMaps.getSize(1)) + ", "
                     + std::to_string(faceHeatMaps.getSize(2)) + ", "
                     + std::to_string(faceHeatMaps.getSize(3)) + "]");
             const auto& handHeatMaps = datumsPtr->at(0)->handHeatMaps;
-            op::log("Left hand heatmaps size: [" + std::to_string(handHeatMaps[0].getSize(0)) + ", "
+            op::opLog("Left hand heatmaps size: [" + std::to_string(handHeatMaps[0].getSize(0)) + ", "
                     + std::to_string(handHeatMaps[0].getSize(1)) + ", "
                     + std::to_string(handHeatMaps[0].getSize(2)) + ", "
                     + std::to_string(handHeatMaps[0].getSize(3)) + "]");
-            op::log("Right hand heatmaps size: [" + std::to_string(handHeatMaps[1].getSize(0)) + ", "
+            op::opLog("Right hand heatmaps size: [" + std::to_string(handHeatMaps[1].getSize(0)) + ", "
                     + std::to_string(handHeatMaps[1].getSize(1)) + ", "
                     + std::to_string(handHeatMaps[1].getSize(2)) + ", "
                     + std::to_string(handHeatMaps[1].getSize(3)) + "]");
         }
     }
     else
-        op::log("Nullptr or empty datumsPtr found.", op::Priority::High);
+        op::opLog("Nullptr or empty datumsPtr found.", op::Priority::High);
 }
 
 void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>>& datumsPtr)
@@ -376,7 +376,7 @@ void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<std::shared_ptr<op
 
     }
     else
-        op::log("Nullptr or empty datumsPtr found.", op::Priority::High, __LINE__, __FUNCTION__, __FILE__);
+        op::opLog("Nullptr or empty datumsPtr found.", op::Priority::High, __LINE__, __FUNCTION__, __FILE__);
 }
 
 void OpenPoseROSIO::stop()

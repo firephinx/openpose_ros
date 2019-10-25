@@ -1,18 +1,19 @@
-#include <gflags_options.h>
+#include <openpose_flags.h>
 
-// See all the available parameter options withe the `--help` flag. E.g. `build/examples/openpose/openpose.bin --help`
+// See all the available parameter options withe the `--help` flag. E.g., `build/examples/openpose/openpose.bin --help`
 // Note: This command will show you flags for other unnecessary 3rdparty files. Check only the flags for the OpenPose
-// executable. E.g. for `openpose.bin`, look for `Flags from examples/openpose/openpose.cpp:`.
+// executable. E.g., for `openpose.bin`, look for `Flags from examples/openpose/openpose.cpp:`.
 // Debugging/Other
-DEFINE_int32(logging_level,             3,              "The logging level. Integer in the range [0, 255]. 0 will output any log() message, while"
-                                                        " 255 will not output any. Current OpenPose library messages are in the range 0-4: 1 for"
-                                                        " low priority messages and 4 for important ones.");
+DEFINE_int32(logging_level,             3,              "The logging level. Integer in the range [0, 255]. 0 will output any opLog() message,"
+                                                        " while 255 will not output any. Current OpenPose library messages are in the range 0-4:"
+                                                        " 1 for low priority messages and 4 for important ones.");
 DEFINE_bool(disable_multi_thread,       false,          "It would slightly reduce the frame rate in order to highly reduce the lag. Mainly useful"
                                                         " for 1) Cases where it is needed a low latency (e.g., webcam in real-time scenarios with"
                                                         " low-range GPU devices); and 2) Debugging OpenPose when it is crashing to locate the"
                                                         " error.");
 DEFINE_int32(profile_speed,             1000,           "If PROFILER_ENABLED was set in CMake or Makefile.config files, OpenPose will show some"
                                                         " runtime statistics at this frame number.");
+#ifndef OPENPOSE_FLAGS_DISABLE_POSE
 // OpenPose
 DEFINE_string(model_folder,             "/path/to/openpose/models/",      "Folder path (absolute or relative) where the models (pose, face, ...) are located.");
 DEFINE_string(prototxt_path,            "",             "The combination `--model_folder` + `--prototxt_path` represents the whole path to the"
@@ -48,8 +49,9 @@ DEFINE_int32(body,                      1,              "Select 0 to disable bod
                                                         " keypoint detection, custom hand detector, etc.), 1 (default) for body keypoint"
                                                         " estimation, and 2 to disable its internal body pose estimation network but still"
                                                         " still run the greedy association parsing algorithm");
-DEFINE_string(model_pose,               "BODY_25",      "Model to be used. E.g., `COCO` (18 keypoints), `MPI` (15 keypoints, ~10% faster), "
-                                                        "`MPI_4_layers` (15 keypoints, even faster but less accurate).");
+DEFINE_string(model_pose,               "BODY_25",      "Model to be used. E.g., `BODY_25` (fastest for CUDA version, most accurate, and includes"
+                                                        " foot keypoints), `COCO` (18 keypoints), `MPI` (15 keypoints, least accurate model but"
+                                                        " fastest on CPU), `MPI_4_layers` (15 keypoints, even faster but less accurate).");
 DEFINE_string(net_resolution,           "-1x368",       "Multiples of 16. If it is increased, the accuracy potentially increases. If it is"
                                                         " decreased, the speed increases. For maximum speed-accuracy balance, it should keep the"
                                                         " closest aspect ratio possible to the images or videos to be processed. Using `-1` in"
@@ -115,7 +117,8 @@ DEFINE_bool(3d,                         false,          "Running OpenPose 3-D re
                                                         " results. Note that it will only display 1 person. If multiple people is present, it will"
                                                         " fail.");
 DEFINE_int32(3d_min_views,              -1,             "Minimum number of views required to reconstruct each keypoint. By default (-1), it will"
-                                                        " require all the cameras to see the keypoint in order to reconstruct it.");
+                                                        " require max(2, min(4, #cameras-1)) cameras to see the keypoint in order to reconstruct"
+                                                        " it.");
 DEFINE_int32(3d_views,                  -1,             "Complementary option for `--image_dir` or `--video`. OpenPose will read as many images per"
                                                         " iteration, allowing tasks such as stereo camera processing (`--3d`). Note that"
                                                         " `--camera_parameter_path` must be set. OpenPose must find as many `xml` files in the"
@@ -130,17 +133,19 @@ DEFINE_int32(ik_threads,                0,              "Experimental, not avail
                                                         " keypoints to obtain 3-D joint angles. By default (0 threads), it is disabled. Increasing"
                                                         " the number of threads will increase the speed but also the global system latency.");
 // OpenPose Rendering
-DEFINE_int32(part_to_show,              0,              "Prediction channel to visualize (default: 0). 0 for all the body parts, 1-18 for each body"
-                                                        " part heat map, 19 for the background heat map, 20 for all the body part heat maps"
-                                                        " together, 21 for all the PAFs, 22-40 for each body part pair PAF.");
+DEFINE_int32(part_to_show,              0,              "Prediction channel to visualize: 0 (default) for all the body parts, 1 for the background"
+                                                        " heat map, 2 for the superposition of heatmaps, 3 for the superposition of PAFs,"
+                                                        " 4-(4+#keypoints) for each body part heat map, the following ones for each body part pair"
+                                                        " PAF.");
 DEFINE_bool(disable_blending,           false,          "If enabled, it will render the results (keypoint skeletons or heatmaps) on a black"
                                                         " background, instead of being rendered into the original image. Related: `part_to_show`,"
                                                         " `alpha_pose`, and `alpha_pose`.");
 // OpenPose Rendering Pose
 DEFINE_double(render_threshold,         0.05,           "Only estimated keypoints whose score confidences are higher than this threshold will be"
-                                                        " rendered. Generally, a high threshold (> 0.5) will only render very clear body parts;"
-                                                        " while small thresholds (~0.1) will also output guessed and occluded keypoints, but also"
-                                                        " more false positives (i.e., wrong detections).");
+                                                        " rendered. Note: Rendered refers only to visual display in the OpenPose basic GUI, not in"
+                                                        " the saved results. Generally, a high threshold (> 0.5) will only render very clear body"
+                                                        " parts; while small thresholds (~0.1) will also output guessed and occluded keypoints,"
+                                                        " but also more false positives (i.e., wrong detections).");
 DEFINE_int32(render_pose,               -1,             "Set to 0 for no rendering, 1 for CPU rendering (slightly faster), and 2 for GPU rendering"
                                                         " (slower but greater functionality, e.g., `alpha_X` flags). If -1, it will pick CPU if"
                                                         " CPU_ONLY is enabled, or GPU if CUDA is enabled. If rendering is enabled, it will render"
@@ -162,6 +167,7 @@ DEFINE_int32(hand_render,               -1,             "Analogous to `render_po
                                                         " configuration that `render_pose` is using.");
 DEFINE_double(hand_alpha_pose,          0.6,            "Analogous to `alpha_pose` but applied to hand.");
 DEFINE_double(hand_alpha_heatmap,       0.7,            "Analogous to `alpha_heatmap` but applied to hand.");
+#ifndef OPENPOSE_FLAGS_DISABLE_DISPLAY
 // Display
 DEFINE_bool(fullscreen,                 false,          "Run in full-screen mode (press f during runtime to toggle).");
 DEFINE_bool(no_gui_verbose,             false,          "Do not write text on output images on GUI (e.g., number of current frame and people). It"
@@ -169,6 +175,7 @@ DEFINE_bool(no_gui_verbose,             false,          "Do not write text on ou
 DEFINE_int32(display,                   -1,             "Display mode: -1 for automatic selection; 0 for no display (useful if there is no X server"
                                                         " and/or to slightly speed up the processing if visual output is not required); 2 for 2-D"
                                                         " display; 3 for 3-D display (if `--3d` enabled); and 1 for both 2-D and 3-D display.");
+#endif // OPENPOSE_FLAGS_DISABLE_DISPLAY
 // Command Line Interface Verbose
 DEFINE_double(cli_verbose,              -1.f,           "If -1, it will be disabled (default). If it is a positive integer number, it will print on"
                                                         " the command line every `verbose` frames. If number in the range (0,1), it will print the"
@@ -196,18 +203,18 @@ DEFINE_string(write_video_3d,           "",             "Analogous to `--write_v
 DEFINE_string(write_video_adam,         "",             "Experimental, not available yet. Analogous to `--write_video`, but applied to Adam model.");
 DEFINE_string(write_json,               "",             "Directory to write OpenPose output in JSON format. It includes body, hand, and face pose"
                                                         " keypoints (2-D and 3-D), as well as pose candidates (if `--part_candidates` enabled).");
-DEFINE_string(write_coco_json,          "",             "Full file path to write people pose data with JSON COCO validation format." 
-                                                        "If foot, face, hands, etc. JSON is also desired (`--write_coco_json_variants`), "
-                                                        "they are saved with different file name suffix.");
-DEFINE_int32(write_coco_json_variants,  1,              "Add 1 for body, add 2 for foot, 4 for face, and/or 8 for hands. "
-                                                        "Use 0 to use all the possible candidates. E.g., 7 would mean body+foot+face COCO JSON.");
-DEFINE_int32(write_coco_json_variant,   0,              "Currently, this option is experimental and only makes effect on car JSON generation. " 
-                                                        "It selects the COCO variant for cocoJsonSaver.");
+DEFINE_string(write_coco_json,          "",             "Full file path to write people pose data with JSON COCO validation format. If foot, face,"
+                                                        " hands, etc. JSON is also desired (`--write_coco_json_variants`), they are saved with"
+                                                        " different file name suffix.");
+DEFINE_int32(write_coco_json_variants,  1,              "Add 1 for body, add 2 for foot, 4 for face, and/or 8 for hands. Use 0 to use all the"
+                                                        " possible candidates. E.g., 7 would mean body+foot+face COCO JSON.");
+DEFINE_int32(write_coco_json_variant,   0,              "Currently, this option is experimental and only makes effect on car JSON generation. It"
+                                                        " selects the COCO variant for cocoJsonSaver.");
 DEFINE_string(write_heatmaps,           "",             "Directory to write body pose heatmaps in PNG format. At least 1 `add_heatmaps_X` flag"
                                                         " must be enabled.");
 DEFINE_string(write_heatmaps_format,    "png",          "File extension and format for `write_heatmaps`, analogous to `write_images_format`."
                                                         " For lossless compression, recommended `png` for integer `heatmaps_scale` and `float` for"
-                                                        " floating values.");
+                                                        " floating values. See `doc/output.md` for more details.");
 DEFINE_string(write_keypoint,           "",             "(Deprecated, use `write_json`) Directory to write the people pose keypoint data. Set format"
                                                         " with `write_keypoint_format`.");
 DEFINE_string(write_keypoint_format,    "yml",          "(Deprecated, use `write_json`) File extension and format for `write_keypoint`: json, xml,"
@@ -217,3 +224,4 @@ DEFINE_string(write_bvh,                "",             "Experimental, not avail
 // UDP Communication
 DEFINE_string(udp_host,                 "",             "Experimental, not available yet. IP for UDP communication. E.g., `192.168.0.1`.");
 DEFINE_string(udp_port,                 "8051",         "Experimental, not available yet. Port number for UDP communication.");
+#endif // OPENPOSE_FLAGS_DISABLE_POSE
