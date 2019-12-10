@@ -5,11 +5,12 @@ using namespace openpose_ros;
 OpenPoseROSIO::OpenPoseROSIO(OpenPose &openPose): nh_("/openpose_ros_node"), it_(nh_)
 {
     // Subscribe to input video feed and publish human lists as output
-    std::string image_topic;
+    std::string image_topic, image_topic2;
     std::string output_topic;
     std::string input_image_transport_type;
 
     nh_.param("image_topic", image_topic, std::string("/camera/image_raw"));
+    nh_.param("image_topic2", image_topic2, std::string("/camera/image_raw"));
     nh_.param("input_image_transport_type", input_image_transport_type, std::string("raw"));
     nh_.param("output_topic", output_topic, std::string("/openpose_ros/human_list"));
     nh_.param("display_output", display_output_flag_, true);
@@ -21,6 +22,7 @@ OpenPoseROSIO::OpenPoseROSIO(OpenPose &openPose): nh_("/openpose_ros_node"), it_
     nh_.param("video_fps", video_fps_, 10);
 
     image_sub_ = it_.subscribe(image_topic, 1, &OpenPoseROSIO::processImage, this, image_transport::TransportHints(input_image_transport_type));
+    image_sub2_ = it_.subscribe(image_topic2, 1, &OpenPoseROSIO::processImage2, this, image_transport::TransportHints(input_image_transport_type));
     openpose_human_list_pub_ = nh_.advertise<openpose_ros_msgs::OpenPoseHumanList>(output_topic, 10);
     cv_img_ptr_ = nullptr;
     openpose_ = &openPose;
@@ -65,6 +67,42 @@ void OpenPoseROSIO::processImage(const sensor_msgs::ImageConstPtr& msg)
         if(display_output_flag_)
         {
             display(datumProcessed);
+        }
+        if(print_keypoints_flag_)
+        {
+            printKeypoints(datumProcessed);
+        }
+        if(save_original_video_flag_)
+        {
+            saveOriginalVideo(datumToProcess);
+        }
+        if(save_openpose_video_flag_)
+        {
+            saveOpenPoseVideo(datumProcessed);
+        }
+        publish(datumProcessed);
+    }
+    else
+    {
+        op::opLog("Processed datum could not be emplaced.", op::Priority::High,
+                __LINE__, __FUNCTION__, __FILE__);
+    }
+}
+
+void OpenPoseROSIO::processImage2(const sensor_msgs::ImageConstPtr& msg)
+{
+    convertImage(msg);
+    std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>> datumToProcess = createDatum();
+
+    bool successfullyEmplaced = openpose_->waitAndEmplace(datumToProcess);
+    
+    // Pop frame
+    std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>> datumProcessed;
+    if (successfullyEmplaced && openpose_->waitAndPop(datumProcessed))
+    {
+        if(display_output_flag_)
+        {
+            display2(datumProcessed);
         }
         if(print_keypoints_flag_)
         {
@@ -132,6 +170,23 @@ bool OpenPoseROSIO::display(const std::shared_ptr<std::vector<std::shared_ptr<op
     if (datumsPtr != nullptr && !datumsPtr->empty())
     {
         cv::imshow("User worker GUI", OP_OP2CVCONSTMAT(datumsPtr->at(0)->cvOutputData));
+        // Display image and sleeps at least 1 ms (it usually sleeps ~5-10 msec to display the image)
+        key = (char)cv::waitKey(1);
+    }
+    else
+        op::opLog("Nullptr or empty datumsPtr found.", op::Priority::High, __LINE__, __FUNCTION__, __FILE__);
+    return (key == 27);
+}
+
+bool OpenPoseROSIO::display2(const std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>>& datumsPtr)
+{
+    // User's displaying/saving/other processing here
+        // datum.cvOutputData: rendered frame with pose or heatmaps
+        // datum.poseKeypoints: Array<float> with the estimated pose
+    char key = ' ';
+    if (datumsPtr != nullptr && !datumsPtr->empty())
+    {
+        cv::imshow("User worker GUI 2", OP_OP2CVCONSTMAT(datumsPtr->at(0)->cvOutputData));
         // Display image and sleeps at least 1 ms (it usually sleeps ~5-10 msec to display the image)
         key = (char)cv::waitKey(1);
     }

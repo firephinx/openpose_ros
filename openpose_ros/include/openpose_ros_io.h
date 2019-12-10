@@ -30,6 +30,7 @@ namespace openpose_ros {
             ros::Publisher openpose_human_list_pub_;
             image_transport::ImageTransport it_;
             image_transport::Subscriber image_sub_;
+            image_transport::Subscriber image_sub2_;
             cv_bridge::CvImagePtr cv_img_ptr_;
             std_msgs::Header image_header_;
 
@@ -57,11 +58,15 @@ namespace openpose_ros {
 
             void processImage(const sensor_msgs::ImageConstPtr& msg);
 
+            void processImage2(const sensor_msgs::ImageConstPtr& msg);
+
             void convertImage(const sensor_msgs::ImageConstPtr& msg);
 
             std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>> createDatum();
 
             bool display(const std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>>& datumsPtr);
+
+            bool display2(const std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>>& datumsPtr);
 
             bool saveOriginalVideo(const std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>>& datumsPtr);
 
