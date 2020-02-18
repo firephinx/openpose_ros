@@ -4,11 +4,11 @@ Example ROS catkin package that utilizes the OpenPose library from https://githu
 
 ## System
 Tested on:
-* Ubuntu 14.04 / Ubuntu 16.04
-* ROS Indigo / Kinetic
-* CUDA 8.0 / CUDA 10.0 / CUDA 10.1
-* cuDNN 5.1 / cuDNN 6.0 / cuDNN 7.2.4 / cuDNN 7.5.0
-* OpenCV 3.3 / OpenCV 3.4
+* Ubuntu 18.04
+* ROS Eloquent
+* CUDA 10.0
+* cuDNN 7
+* OpenCV 3.2
 
 ## Installation Steps
 
@@ -30,11 +30,11 @@ Tested on:
    ```bash
    DEFINE_string(model_folder,             "/path/to/openpose/models/",      "Folder path (absolute or relative) where the models (pose, face, ...) are located.");
    ```
-6. Modify the image_topic parameter in openpose_ros/launch/openpose_ros.launch to the image_topic you want to process.
-   ```bash
-   <param name="image_topic"     value="/camera/image_raw" />
+6. Modify the image_topic parameter in openpose_ros/config/config.yaml to the image_topic you want to process.
+   ```yaml
+   image_topic: "/camera/image_raw"
    ```
-7. Modify the other parameters in openpose_ros/src/openpose_flags.cpp and openpose_ros/launch/openpose_ros.launch to your liking such as enabling face and hands detection.
+7. Modify the other parameters in openpose_ros/src/openpose_flags.cpp and openpose_ros/config/config.yaml  to your liking such as enabling face and hands detection.
 8. Run catkin_make from your catkin_workspace directory.
 
 ### Potential Installation Issues
@@ -43,6 +43,6 @@ Tested on:
 
 ## Running
 ```bash
-source catkin_workspace/devel/setup.bash
-roslaunch openpose_ros openpose_ros.launch
+source workspace/install/setup.bash
+ros2 launch openpose_ros openpose_ros.launch.py
 ```
