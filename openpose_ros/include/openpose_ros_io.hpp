@@ -1,63 +1,66 @@
 #ifndef _OPENPOSE_ROS_IO
 #define _OPENPOSE_ROS_IO
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
-#include <sensor_msgs/image_encodings.h>
-#include <std_msgs/Header.h>
+#include <std_msgs/msg/header.hpp>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>  // Video write
 
-#include <openpose_ros_msgs/BoundingBox.h>
-#include <openpose_ros_msgs/OpenPoseHuman.h>
-#include <openpose_ros_msgs/OpenPoseHumanList.h>
-#include <openpose_ros_msgs/PointWithProb.h>
+#include <openpose_ros_msgs/msg/bounding_box.hpp>
+#include <openpose_ros_msgs/msg/open_pose_human.hpp>
+#include <openpose_ros_msgs/msg/open_pose_human_list.hpp>
+#include <openpose_ros_msgs/msg/point_with_prob.hpp>
 
-#include <openpose.h>
-#include <openpose_flags.h>
+#include <openpose.hpp>
+#include <openpose_flags.hpp>
 
 // OpenPose dependencies
 #include <openpose/headers.hpp>
 
 namespace openpose_ros {
 
-    class OpenPoseROSIO
+    class OpenPoseROSIO : public rclcpp::Node
     {
         private:
-            ros::NodeHandle nh_;
-            ros::Publisher openpose_human_list_pub_;
-            image_transport::ImageTransport it_;
-            image_transport::Subscriber image_sub_;
+            rclcpp::Publisher<openpose_ros_msgs::msg::OpenPoseHumanList>::SharedPtr openpose_human_list_pub_;
             cv_bridge::CvImagePtr cv_img_ptr_;
-            std_msgs::Header image_header_;
+            std_msgs::msg::Header image_header_;
 
             OpenPose* openpose_;
 
-            bool display_output_flag_;
-            bool print_keypoints_flag_;
+            rclcpp::Parameter output_topic_;
 
-            bool save_original_video_flag_;
-            std::string original_video_file_name_;
+            rclcpp::Parameter display_output_flag_;
+            rclcpp::Parameter print_keypoints_flag_;
+
+            rclcpp::Parameter save_original_video_flag_;
+            rclcpp::Parameter original_video_file_name_;
             bool original_video_writer_initialized_;
             cv::VideoWriter original_video_writer_;
 
-            bool save_openpose_video_flag_;
-            std::string openpose_video_file_name_;
+            rclcpp::Parameter save_openpose_video_flag_;
+            rclcpp::Parameter openpose_video_file_name_;
             bool openpose_video_writer_initialized_;
             cv::VideoWriter openpose_video_writer_;
 
-            int video_fps_;
+            rclcpp::Parameter video_fps_;
 
         public:
-            OpenPoseROSIO(OpenPose &openPose);
+            OpenPoseROSIO(const rclcpp::NodeOptions& options, OpenPose &openPose);
 
             ~OpenPoseROSIO(){}
 
-            void processImage(const sensor_msgs::ImageConstPtr& msg);
+            rclcpp::Parameter image_topic_;
+            rclcpp::Parameter input_image_transport_type_;
 
-            void convertImage(const sensor_msgs::ImageConstPtr& msg);
+            std::shared_ptr<rclcpp::Node> getPtr();
+
+            void processImage(const sensor_msgs::msg::Image::ConstSharedPtr& msg);
+
+            void convertImage(const sensor_msgs::msg::Image::ConstSharedPtr& msg);
 
             std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>> createDatum();
 

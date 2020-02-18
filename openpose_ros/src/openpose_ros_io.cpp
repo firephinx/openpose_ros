@@ -1,48 +1,44 @@
-#include <openpose_ros_io.h>
+#include <openpose_ros_io.hpp>
 
 using namespace openpose_ros;
 
-OpenPoseROSIO::OpenPoseROSIO(OpenPose &openPose): nh_("/openpose_ros_node"), it_(nh_)
+OpenPoseROSIO::OpenPoseROSIO(const rclcpp::NodeOptions& options, OpenPose &openPose): Node("openpose_ros_node", options)
 {
     // Subscribe to input video feed and publish human lists as output
-    std::string image_topic;
-    std::string output_topic;
-    std::string input_image_transport_type;
 
-    nh_.param("image_topic", image_topic, std::string("/camera/image_raw"));
-    nh_.param("input_image_transport_type", input_image_transport_type, std::string("raw"));
-    nh_.param("output_topic", output_topic, std::string("/openpose_ros/human_list"));
-    nh_.param("display_output", display_output_flag_, true);
-    nh_.param("print_keypoints", print_keypoints_flag_, false);
-    nh_.param("save_original_video", save_original_video_flag_, false);
-    nh_.param("save_openpose_video", save_openpose_video_flag_, false);
-    nh_.param("original_video_file_name", original_video_file_name_, std::string(""));
-    nh_.param("openpose_video_file_name", openpose_video_file_name_, std::string(""));
-    nh_.param("video_fps", video_fps_, 10);
+    this->get_parameter_or("image_topic", image_topic_, rclcpp::Parameter("image_topic", std::string("/camera/image_raw")));
+    this->get_parameter_or("input_image_transport_type", input_image_transport_type_, rclcpp::Parameter("input_image_transport_type", std::string("raw")));
+    this->get_parameter_or("output_topic", output_topic_, rclcpp::Parameter("output_topic", std::string("/openpose_ros/human_list")));
+    this->get_parameter_or("display_output", display_output_flag_, rclcpp::Parameter("display_output", true));
+    this->get_parameter_or("print_keypoints", print_keypoints_flag_, rclcpp::Parameter("print_keypoints", false));
+    this->get_parameter_or("save_original_video", save_original_video_flag_, rclcpp::Parameter("save_original_video", false));
+    this->get_parameter_or("save_openpose_video", save_openpose_video_flag_, rclcpp::Parameter("save_openpose_video", false));
+    this->get_parameter_or("original_video_file_name", original_video_file_name_, rclcpp::Parameter("original_video_file_name", ""));
+    this->get_parameter_or("openpose_video_file_name", openpose_video_file_name_, rclcpp::Parameter("openpose_video_file_name", ""));
+    this->get_parameter_or("video_fps", video_fps_, rclcpp::Parameter("video_fps", 10));
 
-    image_sub_ = it_.subscribe(image_topic, 1, &OpenPoseROSIO::processImage, this, image_transport::TransportHints(input_image_transport_type));
-    openpose_human_list_pub_ = nh_.advertise<openpose_ros_msgs::OpenPoseHumanList>(output_topic, 10);
+    openpose_human_list_pub_ = this->create_publisher<openpose_ros_msgs::msg::OpenPoseHumanList>(output_topic_.as_string(), 10);
     cv_img_ptr_ = nullptr;
     openpose_ = &openPose;
 
-    if(save_original_video_flag_)
+    if(save_original_video_flag_.as_bool())
     {
-        if(original_video_file_name_.empty())
+        if(original_video_file_name_.as_string().empty())
         {
             std::cout << "No original video filename was provided. Not saving original video." << std::endl; 
-            save_original_video_flag_ = false;
+            save_original_video_flag_ = rclcpp::Parameter("save_original_video", false);
         }
         else
         {
             original_video_writer_initialized_ = false;
         }
     }
-    if(save_openpose_video_flag_)
+    if(save_openpose_video_flag_.as_bool())
     {
-        if(openpose_video_file_name_.empty())
+        if(openpose_video_file_name_.as_string().empty())
         {
             std::cout << "No openpose video filename was provided. Not saving openpose video." << std::endl; 
-            save_openpose_video_flag_ = false;
+            save_openpose_video_flag_ = rclcpp::Parameter("save_openpose_video", false);
         }
         else
         {
@@ -51,7 +47,12 @@ OpenPoseROSIO::OpenPoseROSIO(OpenPose &openPose): nh_("/openpose_ros_node"), it_
     }
 }
 
-void OpenPoseROSIO::processImage(const sensor_msgs::ImageConstPtr& msg)
+std::shared_ptr<rclcpp::Node> OpenPoseROSIO::getPtr()
+{
+    return shared_from_this();
+}
+
+void OpenPoseROSIO::processImage(const sensor_msgs::msg::Image::ConstSharedPtr& msg)
 {
     convertImage(msg);
     std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>> datumToProcess = createDatum();
@@ -62,19 +63,19 @@ void OpenPoseROSIO::processImage(const sensor_msgs::ImageConstPtr& msg)
     std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>> datumProcessed;
     if (successfullyEmplaced && openpose_->waitAndPop(datumProcessed))
     {
-        if(display_output_flag_)
+        if(display_output_flag_.as_bool())
         {
             display(datumProcessed);
         }
-        if(print_keypoints_flag_)
+        if(print_keypoints_flag_.as_bool())
         {
             printKeypoints(datumProcessed);
         }
-        if(save_original_video_flag_)
+        if(save_original_video_flag_.as_bool())
         {
             saveOriginalVideo(datumToProcess);
         }
-        if(save_openpose_video_flag_)
+        if(save_openpose_video_flag_.as_bool())
         {
             saveOpenPoseVideo(datumProcessed);
         }
@@ -87,7 +88,7 @@ void OpenPoseROSIO::processImage(const sensor_msgs::ImageConstPtr& msg)
     }
 }
 
-void OpenPoseROSIO::convertImage(const sensor_msgs::ImageConstPtr& msg)
+void OpenPoseROSIO::convertImage(const sensor_msgs::msg::Image::ConstSharedPtr& msg)
 {
     try
     {
@@ -96,7 +97,7 @@ void OpenPoseROSIO::convertImage(const sensor_msgs::ImageConstPtr& msg)
     }
     catch (cv_bridge::Exception& e)
     {
-        ROS_ERROR("cv_bridge exception: %s", e.what());
+        RCLCPP_ERROR(this->get_logger(), "cv_bridge exception: %s", e.what());
         return;
     }
 }
@@ -150,7 +151,7 @@ bool OpenPoseROSIO::saveOriginalVideo(const std::shared_ptr<std::vector<std::sha
         {
             if(!original_video_writer_initialized_)
             {
-                original_video_writer_ = cv::VideoWriter(original_video_file_name_, CV_FOURCC('M','J','P','G'), video_fps_, current_image.size());
+                original_video_writer_ = cv::VideoWriter(original_video_file_name_.as_string(), CV_FOURCC('M','J','P','G'), video_fps_.as_int(), current_image.size());
                 original_video_writer_initialized_ = true;
             }   
             original_video_writer_.write(current_image);
@@ -171,7 +172,7 @@ bool OpenPoseROSIO::saveOpenPoseVideo(const std::shared_ptr<std::vector<std::sha
         {
             if(!openpose_video_writer_initialized_)
             {
-                openpose_video_writer_ = cv::VideoWriter(openpose_video_file_name_, CV_FOURCC('M','J','P','G'), video_fps_, current_image.size());
+                openpose_video_writer_ = cv::VideoWriter(openpose_video_file_name_.as_string(), CV_FOURCC('M','J','P','G'), video_fps_.as_int(), current_image.size());
                 openpose_video_writer_initialized_ = true;
             }   
             openpose_video_writer_.write(current_image);
@@ -257,16 +258,16 @@ void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<std::shared_ptr<op
         const auto& rightHandKeypoints = datumsPtr->at(0)->handKeypoints[1];
         std::vector<op::Rectangle<float>>& face_rectangles = datumsPtr->at(0)->faceRectangles;
 
-        openpose_ros_msgs::OpenPoseHumanList human_list_msg;
-        human_list_msg.header.stamp = ros::Time::now();
+        openpose_ros_msgs::msg::OpenPoseHumanList human_list_msg;
+        human_list_msg.header.stamp = this->now();
         human_list_msg.image_header = image_header_;
         human_list_msg.num_humans = poseKeypoints.getSize(0);
         
-        std::vector<openpose_ros_msgs::OpenPoseHuman> human_list(poseKeypoints.getSize(0));
+        std::vector<openpose_ros_msgs::msg::OpenPoseHuman> human_list(poseKeypoints.getSize(0));
 
         for (auto person = 0 ; person < poseKeypoints.getSize(0) ; person++)
         {
-            openpose_ros_msgs::OpenPoseHuman human;
+            openpose_ros_msgs::msg::OpenPoseHuman human;
 
             double body_min_x = -1;
             double body_max_x = -1;
@@ -276,7 +277,7 @@ void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<std::shared_ptr<op
             int num_body_key_points_with_non_zero_prob = 0;
             for (auto bodyPart = 0 ; bodyPart < poseKeypoints.getSize(1) ; bodyPart++)
             {
-                openpose_ros_msgs::PointWithProb body_point_with_prob;
+                openpose_ros_msgs::msg::PointWithProb body_point_with_prob;
                 body_point_with_prob.x = poseKeypoints[{person, bodyPart, 0}];
                 body_point_with_prob.y = poseKeypoints[{person, bodyPart, 1}];
                 body_point_with_prob.prob = poseKeypoints[{person, bodyPart, 2}];
@@ -316,7 +317,7 @@ void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<std::shared_ptr<op
 
                 for (auto facePart = 0 ; facePart < faceKeypoints.getSize(1) ; facePart++)
                 {
-                    openpose_ros_msgs::PointWithProb face_point_with_prob;
+                    openpose_ros_msgs::msg::PointWithProb face_point_with_prob;
                     face_point_with_prob.x = faceKeypoints[{person, facePart, 0}];
                     face_point_with_prob.y = faceKeypoints[{person, facePart, 1}];
                     face_point_with_prob.prob = faceKeypoints[{person, facePart, 2}];
@@ -328,7 +329,7 @@ void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<std::shared_ptr<op
                 }  
                 human.num_face_key_points_with_non_zero_prob = num_face_key_points_with_non_zero_prob;
 
-                openpose_ros_msgs::BoundingBox face_bounding_box;
+                openpose_ros_msgs::msg::BoundingBox face_bounding_box;
                 face_bounding_box.x = face_rectangles.at(person).x;
                 face_bounding_box.y = face_rectangles.at(person).y;
                 face_bounding_box.width = face_rectangles.at(person).width;
@@ -344,8 +345,8 @@ void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<std::shared_ptr<op
 
                 for (auto handPart = 0 ; handPart < rightHandKeypoints.getSize(1) ; handPart++)
                 {
-                    openpose_ros_msgs::PointWithProb right_hand_point_with_prob;
-                    openpose_ros_msgs::PointWithProb left_hand_point_with_prob;
+                    openpose_ros_msgs::msg::PointWithProb right_hand_point_with_prob;
+                    openpose_ros_msgs::msg::PointWithProb left_hand_point_with_prob;
                     right_hand_point_with_prob.x = rightHandKeypoints[{person, handPart, 0}];
                     right_hand_point_with_prob.y = rightHandKeypoints[{person, handPart, 1}];
                     right_hand_point_with_prob.prob = rightHandKeypoints[{person, handPart, 2}];
@@ -372,7 +373,7 @@ void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<std::shared_ptr<op
 
         human_list_msg.human_list = human_list;
 
-        openpose_human_list_pub_.publish(human_list_msg);
+        openpose_human_list_pub_->publish(human_list_msg);
 
     }
     else
@@ -381,11 +382,11 @@ void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<std::shared_ptr<op
 
 void OpenPoseROSIO::stop()
 {
-    if(save_original_video_flag_)
+    if(save_original_video_flag_.as_bool())
     {
         original_video_writer_.release();
     }
-    if(save_openpose_video_flag_)
+    if(save_openpose_video_flag_.as_bool())
     {
         openpose_video_writer_.release();
     }

@@ -1,4 +1,4 @@
-#include <openpose.h>
+#include <openpose.hpp>
 
 using namespace openpose_ros;
 

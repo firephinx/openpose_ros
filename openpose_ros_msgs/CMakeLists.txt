@@ -1,31 +1,28 @@
-cmake_minimum_required(VERSION 2.8.7)
+cmake_minimum_required(VERSION 3.5)
 project(openpose_ros_msgs)
 
-## Add support for C++11, supported in ROS Kinetic and newer
-add_definitions(-std=c++11)
+set(CMAKE_CXX_STANDARD 14)
 
-find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  rospy
-  std_msgs
-  message_generation
-)
+find_package(rosidl_default_generators REQUIRED)
+find_package(builtin_interfaces REQUIRED)
+find_package(std_msgs REQUIRED)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
-add_message_files(
-  FILES
-  BoundingBox.msg
-  OpenPoseHuman.msg
-  OpenPoseHumanList.msg
-  PointWithProb.msg
+set(msg_files
+  "msg/BoundingBox.msg"
+  "msg/OpenPoseHuman.msg"
+  "msg/OpenPoseHumanList.msg"
+  "msg/PointWithProb.msg"
 )
 
-generate_messages(
+rosidl_generate_interfaces(${PROJECT_NAME}
+  ${msg_files}
   DEPENDENCIES
+  builtin_interfaces
   std_msgs
 )
 
-catkin_package(
-   CATKIN_DEPENDS roscpp rospy std_msgs message_runtime
-)
+ament_export_dependencies(rosidl_default_runtime)
+
+ament_package()
