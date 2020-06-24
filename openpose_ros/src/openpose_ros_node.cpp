@@ -19,9 +19,9 @@
 #include <chrono> // `std::chrono::` functions and classes, e.g. std::chrono::milliseconds
 #include <thread> // std::this_thread
 
-#include <openpose.h>
-#include <openpose_ros_io.h>
-#include <openpose_flags.h>
+#include <openpose.hpp>
+#include <openpose_ros_io.hpp>
+#include <openpose_flags.hpp>
 
 int openPoseROS()
 {
@@ -40,13 +40,21 @@ int openPoseROS()
     openPose.start();
 
     // OpenPose processing
-    openpose_ros::OpenPoseROSIO openPoseROSIO(openPose);
-    
-    ros::spin();
+    auto options = rclcpp::NodeOptions().
+        allow_undeclared_parameters(true).
+        automatically_declare_parameters_from_overrides(true);
+    auto openPoseROSIO = std::make_shared<openpose_ros::OpenPoseROSIO>(options, openPose);
+    auto sub = image_transport::create_subscription(openPoseROSIO->getPtr().get(),
+        openPoseROSIO->image_topic_.as_string(),
+        std::bind(&openpose_ros::OpenPoseROSIO::processImage, openPoseROSIO, std::placeholders::_1),
+        openPoseROSIO->input_image_transport_type_.as_string()
+    );
+
+    rclcpp::spin(openPoseROSIO);
 
     op::opLog("Stopping thread(s)", op::Priority::High);
     openPose.stop();
-    openPoseROSIO.stop();
+    openPoseROSIO->stop();
 
     // Measuring total time
     const auto now = std::chrono::high_resolution_clock::now();
@@ -56,17 +64,18 @@ int openPoseROS()
                        + std::to_string(totalTimeSec) + " seconds.";
     op::opLog(message, op::Priority::High);
 
+    rclcpp::shutdown();
     return 0;
 }
 
 int main(int argc, char *argv[])
 {
+    // Initializing ros
+    rclcpp::init(argc, argv);
+
     // Parsing command line flags
+    gflags::AllowCommandLineReparsing();
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-    // Initializing ros
-    ros::init(argc, argv, "openpose_ros_node");
-
-    // Running openPoseROS
-    return openPoseROS();
+    openPoseROS();
 }
