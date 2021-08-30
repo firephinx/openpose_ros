@@ -17,7 +17,6 @@
 
 // C++ std library dependencies
 #include <chrono> // `std::chrono::` functions and classes, e.g. std::chrono::milliseconds
-#include <thread> // std::this_thread
 
 #include <openpose.h>
 #include <openpose_ros_io.h>

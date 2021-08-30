@@ -4,11 +4,8 @@ Example ROS catkin package that utilizes the OpenPose library from https://githu
 
 ## System
 Tested on:
-* Ubuntu 14.04 / Ubuntu 16.04
-* ROS Indigo / Kinetic
-* CUDA 8.0 / CUDA 10.0 / CUDA 10.1
-* cuDNN 5.1 / cuDNN 6.0 / cuDNN 7.2.4 / cuDNN 7.5.0
-* OpenCV 3.3 / OpenCV 3.4
+* Ubuntu 18.04
+* ROS Melodic
 
 ## Installation Steps
 
@@ -16,12 +13,12 @@ Tested on:
    ```bash
    git clone https://github.com/CMU-Perceptual-Computing-Lab/openpose.git
    ```
-2. IMPORTANT: I do not update this repository very frequently and the maintainers of OpenPose tend to change their API frequently, so I can only guarantee that it will work with certain versions of OpenPose. Currently I have updated this ros wrapper to work with commit 254570d. You can use get that version by running the following commands:
+2. IMPORTANT: I do not update this repository very frequently and the maintainers of OpenPose tend to change their API frequently, so I can only guarantee that it will work with certain versions of OpenPose. Currently I have updated this ros wrapper to work with commit b1cb2b6. You can use get that version by running the following commands:
    ```bash
    cd openpose
-   git checkout 254570d
+   git checkout b1cb2b6
    ```
-3. Install openpose using instructions from here: https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/254570df262d91b1940aaf5797ba6c5d6db4b52f/doc/installation.md. Make sure to run `sudo make install` in the build folder at the end.
+3. Install openpose using instructions from here: https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/b1cb2b69cf8c4c288921e48c37f339a64db26f58/doc/installation.md. Make sure to run `sudo make install` in the build folder at the end.
 4. Clone this repository into your catkin_workspace/src directory.
    ```bash
    git clone https://github.com/firephinx/openpose_ros.git
@@ -39,7 +36,7 @@ Tested on:
 
 ### Potential Installation Issues
 1. If cv_bridge is causing you errors and/or you decide to use OpenCV 3.2+, copy the cv_bridge folder from https://github.com/ros-perception/vision_opencv into your catkin_workspace/src directory. 
-2. If you have problems with CUDA during catkin_make, uncomment this line in CMakeLists.txt # find_package(CUDA REQUIRED)
+2. If you have problems with finding Threads::Threads during catkin_make, uncomment this line in CMakeLists.txt # find_package(CUDA REQUIRED)
 
 ## Running
 ```bash

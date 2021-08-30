@@ -26,6 +26,7 @@ DECLARE_double(fps_max);
 DECLARE_int32(body);
 DECLARE_string(model_pose);
 DECLARE_string(net_resolution);
+DECLARE_double(net_resolution_dynamic);
 DECLARE_int32(scale_number);
 DECLARE_double(scale_gap);
 // OpenPose Body Pose Heatmaps and Part Candidates
