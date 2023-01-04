@@ -80,12 +80,12 @@ void OpenPose::start()
 
 bool OpenPose::waitAndEmplace(std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>> &datumToProcess)
 {
-    opWrapper.waitAndEmplace(datumToProcess);
+    return opWrapper.waitAndEmplace(datumToProcess);
 }
 
 bool OpenPose::waitAndPop(std::shared_ptr<std::vector<std::shared_ptr<op::Datum>>> &datumProcessed)
 {
-    opWrapper.waitAndPop(datumProcessed);
+    return opWrapper.waitAndPop(datumProcessed);
 }
 
 void OpenPose::stop()
